@@ -346,8 +346,8 @@ class IRCClient(object):
     async def handle_telegram_chat_action(self, event):
         self.logger.info('Handling Telegram Chat Action: %s', event)
 
-        irc_channel = self.tid_to_iid[event.to_id]
-        irc_nick    = self.tid_to_iid[event.user_id]
+        irc_channel = self.tid_to_iid[event.action_message.to_id.channel_id]
+        irc_nick    = self.tid_to_iid[event.action_message.from_id]
 
         if event.user_added or event.user_joined:
             await self.join_irc_channel(irc_nick, irc_channel)
