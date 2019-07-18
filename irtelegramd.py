@@ -115,6 +115,7 @@ class IRCClient(object):
             self.irc_online.add(nick)
 
     async def send_irc_command(self, command):
+        self.logger.debug('Send IRC Command: %s', command)
         command = command + '\r\n'
         self.stream.write(command.encode())
 
@@ -297,9 +298,10 @@ class IRCClient(object):
         self.logger.debug('Handling Telegram Private Message: %s', event)
 
         nick = self.tid_to_iid[event.from_id]
-        await self.send_irc_command(':{} PRIVMSG {} :{}'.format(
-            self.get_irc_user_mask(nick), self.irc_nick, event.message.message
-        ))
+        for message in event.message.message.splitlines():
+            await self.send_irc_command(':{} PRIVMSG {} :{}'.format(
+                self.get_irc_user_mask(nick), self.irc_nick, message
+            ))
 
     async def handle_telegram_channel_message(self, event):
         self.logger.debug('Handling Telegram Channel Message: %s', event)
@@ -322,7 +324,7 @@ class IRCClient(object):
             await self.join_irc_channel(nick, channel)
 
         # Format messages with media
-        messages = [event.message.message] if event.message.message else []
+        messages = event.message.message.splitlines() if event.message.message else []
         if event.message.media and (event.message.photo or event.message.gif):
             message = await self.download_telegram_media(event.message, 'Image')
             if message:
