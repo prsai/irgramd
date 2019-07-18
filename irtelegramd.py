@@ -280,14 +280,17 @@ class IRCClient(object):
     def get_telegram_channel(self, chat):
         return '#' + chat.title.lower().replace(' ', '-')
 
+    async def get_irc_nick_from_telegram_id(self, tid):
+        if tid not in self.tid_to_iid:
+            user = await self.telegram_client.get_input_entity(tid)
+            nick = self.get_telegram_nick(user)
+            self.tid_to_iid[tid]  = nick
+            self.iid_to_tid[nick] = tid
+
+        return self.tid_to_iid[tid]
+
     async def handle_telegram_message(self, event):
         self.logger.debug('Handling Telegram Message: %s', event)
-
-        if event.from_id not in self.tid_to_iid:
-            user = await self.telegram_client.get_input_entity(event.from_id)
-            nick = self.get_telegram_nick(user)
-            self.tid_to_iid[user.id] = nick
-            self.iid_to_tid[nick]    = user.id
 
         if event.message.is_private:
             await self.handle_telegram_private_message(event)
@@ -297,7 +300,7 @@ class IRCClient(object):
     async def handle_telegram_private_message(self, event):
         self.logger.debug('Handling Telegram Private Message: %s', event)
 
-        nick = self.tid_to_iid[event.from_id]
+        nick = await self.get_irc_nick_from_telegram_id(event.from_id)
         for message in event.message.message.splitlines():
             await self.send_irc_command(':{} PRIVMSG {} :{}'.format(
                 self.get_irc_user_mask(nick), self.irc_nick, message
@@ -319,7 +322,7 @@ class IRCClient(object):
         if channel not in self.irc_channels:
             await self.join_irc_channel(self.irc_nick, channel)
 
-        nick = self.tid_to_iid[event.from_id]
+        nick = await self.get_irc_nick_from_telegram_id(event.from_id)
         if nick not in self.irc_channels[channel]:
             await self.join_irc_channel(nick, channel)
 
@@ -349,7 +352,7 @@ class IRCClient(object):
         self.logger.info('Handling Telegram Chat Action: %s', event)
 
         irc_channel = self.tid_to_iid[event.action_message.to_id.channel_id]
-        irc_nick    = self.tid_to_iid[event.action_message.from_id]
+        irc_nick    = await self.get_irc_nick_from_telegram_id(event.action_message.from_id)
 
         if event.user_added or event.user_joined:
             await self.join_irc_channel(irc_nick, irc_channel)
