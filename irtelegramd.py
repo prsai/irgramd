@@ -282,7 +282,10 @@ class IRCClient(object):
 
     async def get_irc_nick_from_telegram_id(self, tid):
         if tid not in self.tid_to_iid:
-            user = await self.telegram_client.get_input_entity(tid)
+            try:
+                user = await self.telegram_client.get_input_entity(tid)
+            except ValueError:
+                user = await self.telegram_client.get_entity(tid)
             nick = self.get_telegram_nick(user)
             self.tid_to_iid[tid]  = nick
             self.iid_to_tid[nick] = tid
@@ -351,8 +354,18 @@ class IRCClient(object):
     async def handle_telegram_chat_action(self, event):
         self.logger.info('Handling Telegram Chat Action: %s', event)
 
-        irc_channel = self.tid_to_iid[event.action_message.to_id.channel_id]
-        irc_nick    = await self.get_irc_nick_from_telegram_id(event.action_message.from_id)
+        try:
+            irc_channel = self.tid_to_iid[event.action_message.to_id.channel_id]
+        except AttributeError:
+            irc_channel = self.tid_to_iid[event.action_message.to_id.chat_id]
+
+        try:                                        # Join Chats
+            irc_nick = await self.get_irc_nick_from_telegram_id(event.action_message.action.users[0])
+        except (IndexError, AttributeError):
+            try:                                    # Kick
+                irc_nick = await self.get_irc_nick_from_telegram_id(event.action_message.action.user_id)
+            except (IndexError, AttributeError):    # Join Channels
+                irc_nick = await self.get_irc_nick_from_telegram_id(event.action_message.from_id)
 
         if event.user_added or event.user_joined:
             await self.join_irc_channel(irc_nick, irc_channel)
