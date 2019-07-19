@@ -282,10 +282,7 @@ class IRCClient(object):
 
     async def get_irc_nick_from_telegram_id(self, tid):
         if tid not in self.tid_to_iid:
-            try:
-                user = await self.telegram_client.get_input_entity(tid)
-            except ValueError:
-                user = await self.telegram_client.get_entity(tid)
+            user = await self.telegram_client.get_entity(tid)
             nick = self.get_telegram_nick(user)
             self.tid_to_iid[tid]  = nick
             self.iid_to_tid[nick] = tid
