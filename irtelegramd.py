@@ -17,8 +17,8 @@ import telethon
 
 # Configuration
 
-NICK_MAX_LENGTH   = 20
-USER_STATUS_DELAY = 300
+NICK_MAX_LENGTH             = 20
+UPDATE_CHANNEL_VOICES_DELAY = 300
 
 # Utilities
 
@@ -102,15 +102,10 @@ class IRCClient(object):
         self.iid_to_tid   = {}
         self.irc_channels = collections.defaultdict(set)
         self.irc_nick     = None
-        self.irc_online   = set()
+        self.irc_voices   = collections.defaultdict(set)
 
     def get_irc_user_mask(self, nick):
         return '{}!{}@{}'.format(nick, nick, self.hostname)
-
-    def schedule_irc_mode_update(self, nick, channel, force=False):
-        if nick not in self.irc_online or force:
-            self.ioloop.call_later(USER_STATUS_DELAY, self.update_irc_mode, nick, channel)
-            self.irc_online.add(nick)
 
     async def send_irc_command(self, command):
         self.logger.debug('Send IRC Command: %s', command)
@@ -187,12 +182,7 @@ class IRCClient(object):
             ))
 
         # Update voices
-        for user_nick in voices:
-            await self.send_irc_command(':{} MODE {} +v {}'.format(
-                self.hostname, channel, user_nick,
-            ))
-
-            self.schedule_irc_mode_update(user_nick, channel)
+        await self.update_channel_voices(channel, voices)
 
     async def part_irc_channel(self, nick, channel):
         self.irc_channels[channel].remove(nick)
@@ -200,16 +190,28 @@ class IRCClient(object):
             self.get_irc_user_mask(nick), channel
         ))
 
-    async def update_irc_mode(self, nick, channel):
-        tid  = self.iid_to_tid[nick]
-        user = await self.telegram_client.get_entity(tid)
-        if isinstance(user.status, telethon.types.UserStatusOnline):
-            self.schedule_irc_mode_update(nick, channel, True)
-        else:
-            self.irc_online.remove(nick)
+    async def update_channel_voices(self, channel, voices=None):
+        # Get voices for channel if not provided
+        if not voices:
+            tid       = self.iid_to_tid[channel]
+            _, voices = await self.get_telegram_channel_participants(tid)
+
+        # Add new voices
+        for nick in voices:
+            if nick not in self.irc_voices[channel]:
+                self.irc_voices[channel].add(nick)
+                await self.send_irc_command(':{} MODE {} +v {}'.format(
+                    self.hostname, channel, nick,
+                ))
+
+        # Remove old voices
+        for nick in self.irc_voices[channel].difference(voices):
+            self.irc_voices[channel].remove(nick)
             await self.send_irc_command(':{} MODE {} -v {}'.format(
                 self.hostname, channel, nick,
             ))
+
+        self.ioloop.call_later(UPDATE_CHANNEL_VOICES_DELAY, self.update_channel_voices, channel)
 
     # Telegram
 
@@ -279,7 +281,7 @@ class IRCClient(object):
     async def get_telegram_channel_participants(self, tid):
         channel = self.tid_to_iid[tid]
         nicks   = []
-        voices  = []
+        voices  = set()
         async for user in self.telegram_client.iter_participants(tid):
             if user.id not in self.tid_to_iid:
                 user_nick = self.get_telegram_nick(user)
@@ -289,7 +291,7 @@ class IRCClient(object):
                 user_nick = self.tid_to_iid[user.id]
 
             if isinstance(user.status, telethon.types.UserStatusOnline):
-                voices.append(user_nick)
+                voices.add(user_nick)
 
             nicks.append(user_nick)
             self.irc_channels[channel].add(user_nick)
@@ -342,13 +344,6 @@ class IRCClient(object):
         elif event.message.media and (event.message.sticker):
             messages.insert(0, 'Sticker: {}'.format(event.message.sticker.id))
 
-        # Give voice and schedule IRC mode update
-        if nick not in self.irc_online:
-            await self.send_irc_command(':{} MODE {} +v {}'.format(
-                self.hostname, channel, nick,
-            ))
-            self.schedule_irc_mode_update(nick, channel)
-
         # Send all messages to IRC
         for message in messages:
             await self.send_irc_command(':{} PRIVMSG {} :{}'.format(
@@ -364,7 +359,7 @@ class IRCClient(object):
             tid = event.action_message.to_id.chat_id
         finally:
             irc_channel = self.tid_to_iid[tid]
-            await get_telegram_channel_participants(tid)
+            await self.get_telegram_channel_participants(tid)
 
         try:                                        # Join Chats
             irc_nick = await self.get_irc_nick_from_telegram_id(event.action_message.action.users[0])
