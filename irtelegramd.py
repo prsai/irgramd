@@ -23,6 +23,7 @@ UPDATE_CHANNEL_VOICES_DELAY = 300
 # Utilities
 
 def chunks(iterable, n, fillvalue=None):
+    ''' Return iterable consisting of a sequence of n-length chunks '''
     args = [iter(iterable)] * n
     return itertools.zip_longest(*args, fillvalue=fillvalue)
 
@@ -269,12 +270,21 @@ class IRCClient(object):
     def get_telegram_channel(self, chat):
         return '#' + chat.title.lower().replace(' ', '-')
 
-    async def get_irc_nick_from_telegram_id(self, tid):
+    async def get_irc_nick_from_telegram_id(self, tid, entity=None):
         if tid not in self.tid_to_iid:
-            user = await self.telegram_client.get_entity(tid)
+            user = entity or await self.telegram_client.get_entity(tid)
             nick = self.get_telegram_nick(user)
             self.tid_to_iid[tid]  = nick
             self.iid_to_tid[nick] = tid
+
+        return self.tid_to_iid[tid]
+
+    async def get_irc_channel_from_telegram_id(self, tid, entity=None):
+        if tid not in self.tid_to_iid:
+            chat    = entity or await self.telegram_client.get_entity(tid)
+            channel = self.get_telegram_channel(chat)
+            self.tid_to_iid[tid]     = channel
+            self.iid_to_tid[channel] = tid
 
         return self.tid_to_iid[tid]
 
@@ -283,12 +293,7 @@ class IRCClient(object):
         nicks   = []
         voices  = set()
         async for user in self.telegram_client.iter_participants(tid):
-            if user.id not in self.tid_to_iid:
-                user_nick = self.get_telegram_nick(user)
-                self.tid_to_iid[user.id]   = user_nick
-                self.iid_to_tid[user_nick] = user.id
-            else:
-                user_nick = self.tid_to_iid[user.id]
+            user_nick = await self.get_irc_nick_from_telegram_id(user.id, user)
 
             if isinstance(user.status, telethon.types.UserStatusOnline):
                 voices.add(user_nick)
@@ -318,16 +323,9 @@ class IRCClient(object):
     async def handle_telegram_channel_message(self, event):
         self.logger.debug('Handling Telegram Channel Message: %s', event)
 
-        # Retrieve IRC channel name from Telegram ID
-        if event.message.chat_id not in self.tid_to_iid:
-            chat    = await event.message.get_chat()
-            channel = self.get_telegram_channel(chat)
-            self.tid_to_iid[chat.id] = channel
-            self.iid_to_tid[channel] = chat.id
-        else:
-            channel = self.tid_to_iid[event.message.chat_id]
-
         # Join IRC channel if not already in it
+        entity  = await event.message.get_chat()
+        channel = await self.get_irc_channel_from_telegram_id(event.message.chat_id, entity)
         if channel not in self.irc_channels:
             await self.join_irc_channel(self.irc_nick, channel, True)
 
@@ -351,14 +349,14 @@ class IRCClient(object):
             ))
 
     async def handle_telegram_chat_action(self, event):
-        self.logger.info('Handling Telegram Chat Action: %s', event)
+        self.logger.debug('Handling Telegram Chat Action: %s', event)
 
         try:
             tid = event.action_message.to_id.channel_id
         except AttributeError:
             tid = event.action_message.to_id.chat_id
         finally:
-            irc_channel = self.tid_to_iid[tid]
+            irc_channel = await self.get_irc_channel_from_telegram_id(tid)
             await self.get_telegram_channel_participants(tid)
 
         try:                                        # Join Chats
