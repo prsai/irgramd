@@ -400,5 +400,5 @@ class IRCClient(object):
 
 if __name__ == '__main__':
     # TODO: Make configuration directory settable at run-time
-    irc_server = IRCServer()
+    irc_server = IRCServer(address="0.0.0.0")
     irc_server.run()
