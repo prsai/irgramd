@@ -399,5 +399,6 @@ class IRCClient(object):
 # Main Execution
 
 if __name__ == '__main__':
-    irc_server = IRCServer(port=6668)
+    # TODO: Make configuration directory settable at run-time
+    irc_server = IRCServer()
     irc_server.run()
