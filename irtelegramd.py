@@ -27,21 +27,23 @@ def chunks(iterable, n, fillvalue=None):
     args = [iter(iterable)] * n
     return itertools.zip_longest(*args, fillvalue=fillvalue)
 
-# IRC Server
+# IRC Telegram Daemon
 
-class IRCServer(tornado.tcpserver.TCPServer):
-    def __init__(self, address=None, port=6667):
+class IRCTelegramd(tornado.tcpserver.TCPServer):
+    def __init__(self, address=None, port=6667, config_dir=None, **settings):
         tornado.tcpserver.TCPServer.__init__(self)
 
-        self.logger  = logging.getLogger()
-        self.address = address or '127.0.0.1'
-        self.port    = port
+        self.logger     = logging.getLogger()
+        self.address    = address or '127.0.0.1'
+        self.port       = port
+        self.config_dir = config_dir or os.path.expanduser('~/.config/irtelegramd')
 
-        self.logger.setLevel(logging.INFO)
+        if not os.path.exists(self.config_dir):
+            os.makedirs(self.config_dir)
 
     async def handle_stream(self, stream, address):
-        client = IRCClient(stream, address)
-        await client.run()
+        handler = IRCHandler(stream, address, self.config_dir)
+        await handler.run()
 
     def run(self):
         self.listen(self.port, self.address)
@@ -57,20 +59,16 @@ IRC_PING_RX    = re.compile(r'PING (?P<payload>[^\n\r]+)')
 IRC_PRIVMSG_RX = re.compile(r'PRIVMSG (?P<nick>[^\s]+) :(?P<message>[^\n\r]+)')
 IRC_USER_RX    = re.compile(r'USER (?P<username>[^\s]+) 0 \* :(?P<realname>[^\n\r]+)')
 
-# IRC Client
+# IRC Handler
 
-class IRCClient(object):
-    def __init__(self, stream, address):
+class IRCHandler(object):
+    def __init__(self, stream, address, config_dir):
         self.logger     = logging.getLogger()
         self.address    = '{}:{}'.format(address[0], address[1])
         self.stream     = stream
         self.ioloop     = tornado.ioloop.IOLoop.current()
         self.hostname   = socket.gethostname()
-
-        # Initialize configuration directory
-        self.config_dir = os.path.expanduser('~/.config/irtelegramd')
-        if not os.path.exists(self.config_dir):
-            os.makedirs(self.config_dir)
+        self.config_dir = config_dir
 
         # Initialize IRC
         self.initialize_irc()
@@ -399,6 +397,11 @@ class IRCClient(object):
 # Main Execution
 
 if __name__ == '__main__':
-    # TODO: Make configuration directory settable at run-time
-    irc_server = IRCServer()
+    tornado.options.define('address', default=None, help='Address to listen on.')
+    tornado.options.define('port', default=6667, help='Port to listen on.')
+    tornado.options.define('config_dir', default=None, help='Configuration directory')
+    tornado.options.parse_command_line()
+
+    options    = tornado.options.options.as_dict()
+    irc_server = IRCTelegramd(**options)
     irc_server.run()
