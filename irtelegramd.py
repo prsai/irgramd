@@ -38,6 +38,8 @@ class IRCTelegramd(tornado.tcpserver.TCPServer):
         self.port       = port
         self.config_dir = config_dir or os.path.expanduser('~/.config/irtelegramd')
 
+        self.logger.info('Configuration Directory: %s', self.config_dir)
+
         if not os.path.exists(self.config_dir):
             os.makedirs(self.config_dir)
 
