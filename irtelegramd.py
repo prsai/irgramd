@@ -125,6 +125,8 @@ class IRCHandler(object):
     async def handle_irc_user(self, username, realname):
         self.logger.debug('Handling USER: %s, %s', username, realname)
 
+        self.irc_nick = username
+
         await self.send_irc_command(':{} 001 {} :{}'.format(
             self.hostname, self.irc_nick, 'Welcome to IRTelegramD'
         ))
