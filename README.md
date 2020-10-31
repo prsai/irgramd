@@ -1,4 +1,4 @@
-# IRTelegramD - IRC <-> Telegram Gateway
+# irgramd - IRC <-> Telegram Gateway
 
 I'm a fan of the [Destination Linux] and [Late Night Linux] podcasts... but
 they only provide [Telegram] groups for discussion, which is unfortunate
