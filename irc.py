@@ -25,7 +25,7 @@ IRC_NICK_RX    = re.compile(r'NICK :(?P<nick>[^\n\r]+)')
 IRC_PASS_RX    = re.compile(r'PASS :(?P<app_id>[^\s]+) (?P<app_hash>[^\n\r]+)')
 IRC_PING_RX    = re.compile(r'PING (?P<payload>[^\n\r]+)')
 IRC_PRIVMSG_RX = re.compile(r'PRIVMSG (?P<nick>[^\s]+) :(?P<message>[^\n\r]+)')
-IRC_USER_RX    = re.compile(r'USER (?P<username>[^\s]+) 0 \* :(?P<realname>[^\n\r]+)')
+IRC_USER_RX    = re.compile(r'USER (?P<username>[^\s]+) [^\s]+ [^\s]+ :(?P<realname>[^\n\r]+)')
 
 # IRC Handler
 
