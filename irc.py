@@ -282,7 +282,7 @@ class IRCHandler(object):
     async def handle_telegram_private_message(self, event):
         self.logger.debug('Handling Telegram Private Message: %s', event)
 
-        nick = await self.get_irc_nick_from_telegram_id(event.from_id)
+        nick = await self.get_irc_nick_from_telegram_id(event.sender_id)
         for message in event.message.message.splitlines():
             await self.send_irc_command(':{} PRIVMSG {} :{}'.format(
                 self.get_irc_user_mask(nick), self.irc_nick, message
@@ -297,7 +297,7 @@ class IRCHandler(object):
         if channel not in self.irc_channels:
             await self.join_irc_channel(self.irc_nick, channel, True)
 
-        nick = await self.get_irc_nick_from_telegram_id(event.from_id)
+        nick = await self.get_irc_nick_from_telegram_id(event.sender_id)
         if nick not in self.irc_channels[channel]:
             await self.join_irc_channel(nick, channel, False)
 
@@ -333,7 +333,7 @@ class IRCHandler(object):
             try:                                    # Kick
                 irc_nick = await self.get_irc_nick_from_telegram_id(event.action_message.action.user_id)
             except (IndexError, AttributeError):    # Join Channels
-                irc_nick = await self.get_irc_nick_from_telegram_id(event.action_message.from_id)
+                irc_nick = await self.get_irc_nick_from_telegram_id(event.action_message.sender_id)
 
         if event.user_added or event.user_joined:
             await self.join_irc_channel(irc_nick, irc_channel, False)
