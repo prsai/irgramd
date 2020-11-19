@@ -95,7 +95,7 @@ class IRCHandler(object):
         self.irc_nick = username
 
         await self.send_irc_command(':{} 001 {} :{}'.format(
-            self.hostname, self.irc_nick, 'Welcome to IRTelegramD'
+            self.hostname, self.irc_nick, 'Welcome to irgramd'
         ))
         await self.send_irc_command(':{} 376 {} :{}'.format(
             self.hostname, self.irc_nick, 'End of MOTD command'
