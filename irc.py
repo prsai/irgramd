@@ -37,6 +37,7 @@ class IRCHandler(object):
         self.ioloop     = tornado.ioloop.IOLoop.current()
         self.hostname   = socket.gethostname()
         self.config_dir = config_dir
+        self.tg         = TelegramHandler(self, config_dir)
 
         # Initialize IRC
         self.initialize_irc()
@@ -84,7 +85,7 @@ class IRCHandler(object):
 
         if self.irc_nick in self.iid_to_tid:
             tid = self.iid_to_tid[self.irc_nick]
-            self.tid_to_iid[tid]  = nick
+            self.tg.tid_to_iid[tid]  = nick
             self.iid_to_tid[nick] = tid
 
         self.irc_nick = nick
@@ -101,12 +102,12 @@ class IRCHandler(object):
             self.hostname, self.irc_nick, 'End of MOTD command'
         ))
 
-        await self.initialize_telegram()
+        await self.tg.initialize_telegram()
 
     async def handle_irc_pass(self, app_id, app_hash):
         self.logger.debug('Handling PASS: %s %s', app_id, app_hash)
-        self.telegram_app_id   = int(app_id)
-        self.telegram_app_hash = app_hash
+        self.tg.telegram_app_id   = int(app_id)
+        self.tg.telegram_app_hash = app_hash
 
     async def handle_irc_ping(self, payload):
         self.logger.debug('Handling PING: %s', payload)
@@ -121,7 +122,7 @@ class IRCHandler(object):
             print('TODO: handle error')
 
         telegram_id = self.iid_to_tid[nick]
-        await self.telegram_client.send_message(telegram_id, message)
+        await self.tg.telegram_client.send_message(telegram_id, message)
 
     async def join_irc_channel(self, nick, channel, full_join=False):
         self.irc_channels[channel].add(nick)
@@ -136,10 +137,10 @@ class IRCHandler(object):
 
         # Add all users to channel
         tid           = self.iid_to_tid[channel]
-        nicks, voices = await self.get_telegram_channel_participants(tid)
+        nicks, voices = await self.tg.get_telegram_channel_participants(tid)
 
         # Set channel topic
-        topic = (await self.telegram_client.get_entity(tid)).title
+        topic = (await self.tg.telegram_client.get_entity(tid)).title
         await self.send_irc_command(':{} TOPIC {} :{}'.format(
             self.get_irc_user_mask(nick), channel, topic
         ))
@@ -163,7 +164,7 @@ class IRCHandler(object):
         # Get voices for channel if not provided
         if not voices:
             tid       = self.iid_to_tid[channel]
-            _, voices = await self.get_telegram_channel_participants(tid)
+            _, voices = await self.tg.get_telegram_channel_participants(tid)
 
         # Add new voices
         for nick in voices:
@@ -184,6 +185,12 @@ class IRCHandler(object):
 
     # Telegram
 
+class TelegramHandler(object):
+    def __init__(self, irc, config_dir):
+        self.logger     = logging.getLogger()
+        self.config_dir = config_dir
+        self.irc        = irc
+
     async def initialize_telegram(self):
         # Setup media folder
         self.telegram_media_dir = os.path.join(self.config_dir, 'media')
@@ -196,7 +203,7 @@ class IRCHandler(object):
             os.makedirs(self.telegram_session_dir)
 
         # Construct Telegram client
-        telegram_session     = os.path.join(self.telegram_session_dir, self.irc_nick)
+        telegram_session     = os.path.join(self.telegram_session_dir, self.irc.irc_nick)
         self.telegram_client = telethon.TelegramClient(telegram_session,
             self.telegram_app_id,   # TODO: handle error
             self.telegram_app_hash,
@@ -218,10 +225,10 @@ class IRCHandler(object):
 
         # Update IRC <-> Telegram mapping
         telegram_me = await self.telegram_client.get_me()
-        iid = self.irc_nick
+        iid = self.irc.irc_nick
         tid = telegram_me.id
         self.tid_to_iid[tid] = iid
-        self.iid_to_tid[iid] = tid
+        self.irc.iid_to_tid[iid] = tid
 
         # Join all Telegram channels
         await self.join_all_telegram_channels()
@@ -231,7 +238,7 @@ class IRCHandler(object):
                 or telethon.utils.get_display_name(user)
                 or str(user.id))
         nick = nick.replace(' ', '')[:NICK_MAX_LENGTH]
-        while nick in self.iid_to_tid:
+        while nick in self.irc.iid_to_tid:
             nick += '_'
         return nick
 
@@ -243,7 +250,7 @@ class IRCHandler(object):
             user = entity or await self.telegram_client.get_entity(tid)
             nick = self.get_telegram_nick(user)
             self.tid_to_iid[tid]  = nick
-            self.iid_to_tid[nick] = tid
+            self.irc.iid_to_tid[nick] = tid
 
         return self.tid_to_iid[tid]
 
@@ -252,7 +259,7 @@ class IRCHandler(object):
             chat    = entity or await self.telegram_client.get_entity(tid)
             channel = self.get_telegram_channel(chat)
             self.tid_to_iid[tid]     = channel
-            self.iid_to_tid[channel] = tid
+            self.irc.iid_to_tid[channel] = tid
 
         return self.tid_to_iid[tid]
 
@@ -267,7 +274,7 @@ class IRCHandler(object):
                 voices.add(user_nick)
 
             nicks.append(user_nick)
-            self.irc_channels[channel].add(user_nick)
+            self.irc.irc_channels[channel].add(user_nick)
 
         return nicks, voices
 
@@ -284,8 +291,8 @@ class IRCHandler(object):
 
         nick = await self.get_irc_nick_from_telegram_id(event.sender_id)
         for message in event.message.message.splitlines():
-            await self.send_irc_command(':{} PRIVMSG {} :{}'.format(
-                self.get_irc_user_mask(nick), self.irc_nick, message
+            await self.irc.send_irc_command(':{} PRIVMSG {} :{}'.format(
+                self.irc.get_irc_user_mask(nick), self.irc.irc_nick, message
             ))
 
     async def handle_telegram_channel_message(self, event):
@@ -294,12 +301,12 @@ class IRCHandler(object):
         # Join IRC channel if not already in it
         entity  = await event.message.get_chat()
         channel = await self.get_irc_channel_from_telegram_id(event.message.chat_id, entity)
-        if channel not in self.irc_channels:
-            await self.join_irc_channel(self.irc_nick, channel, True)
+        if channel not in self.irc.irc_channels:
+            await self.irc.join_irc_channel(self.irc.irc_nick, channel, True)
 
         nick = await self.get_irc_nick_from_telegram_id(event.sender_id)
-        if nick not in self.irc_channels[channel]:
-            await self.join_irc_channel(nick, channel, False)
+        if nick not in self.irc.irc_channels[channel]:
+            await self.irc.join_irc_channel(nick, channel, False)
 
         # Format messages with media
         messages = event.message.message.splitlines() if event.message.message else []
@@ -312,8 +319,8 @@ class IRCHandler(object):
 
         # Send all messages to IRC
         for message in messages:
-            await self.send_irc_command(':{} PRIVMSG {} :{}'.format(
-                self.get_irc_user_mask(nick), channel, message
+            await self.irc.send_irc_command(':{} PRIVMSG {} :{}'.format(
+                self.irc.get_irc_user_mask(nick), channel, message
             ))
 
     async def handle_telegram_chat_action(self, event):
@@ -336,9 +343,9 @@ class IRCHandler(object):
                 irc_nick = await self.get_irc_nick_from_telegram_id(event.action_message.sender_id)
 
         if event.user_added or event.user_joined:
-            await self.join_irc_channel(irc_nick, irc_channel, False)
+            await self.irc.join_irc_channel(irc_nick, irc_channel, False)
         elif event.user_kicked or event.user_left:
-            await self.part_irc_channel(irc_nick, irc_channel)
+            await self.irc.part_irc_channel(irc_nick, irc_channel)
 
     async def join_all_telegram_channels(self):
         async for dialog in self.telegram_client.iter_dialogs():
@@ -346,8 +353,8 @@ class IRCHandler(object):
             if not isinstance(chat, telethon.types.User):
                 channel = self.get_telegram_channel(chat)
                 self.tid_to_iid[chat.id] = channel
-                self.iid_to_tid[channel] = chat.id
-                await self.join_irc_channel(self.irc_nick, channel, True)
+                self.irc.iid_to_tid[channel] = chat.id
+                await self.irc.join_irc_channel(self.irc.irc_nick, channel, True)
 
     async def download_telegram_media(self, message, tag):
         local_path = await message.download_media(self.telegram_media_dir)
