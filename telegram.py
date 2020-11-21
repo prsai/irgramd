@@ -14,6 +14,8 @@ class TelegramHandler(object):
         self.logger     = logging.getLogger()
         self.config_dir = config_dir
         self.irc        = irc
+        self.telegram_app_id = ''
+        self.telegram_app_hash = ''
 
     async def initialize_telegram(self):
         # Setup media folder
