@@ -5,6 +5,12 @@ import telethon
 
 # Configuration
 
+# GET API_ID and API_HASH from https://my.telegram.org/apps
+# AND PUT HERE BEFORE RUNNING irgramd
+
+TELEGRAM_API_ID             =
+TELEGRAM_API_HASH           = ''
+
 NICK_MAX_LENGTH             = 20
 
     # Telegram
@@ -14,10 +20,8 @@ class TelegramHandler(object):
         self.logger     = logging.getLogger()
         self.config_dir = config_dir
         self.irc        = irc
-        self.telegram_app_id = ''
-        self.telegram_app_hash = ''
 
-    async def initialize_telegram(self):
+    def initialize_telegram(self):
         # Setup media folder
         self.telegram_media_dir = os.path.join(self.config_dir, 'media')
         if not os.path.exists(self.telegram_media_dir):
@@ -29,10 +33,9 @@ class TelegramHandler(object):
             os.makedirs(self.telegram_session_dir)
 
         # Construct Telegram client
-        telegram_session     = os.path.join(self.telegram_session_dir, self.irc.irc_nick)
+        telegram_session     = os.path.join(self.telegram_session_dir, 'telegram')
         self.telegram_client = telethon.TelegramClient(telegram_session,
-            self.telegram_app_id,   # TODO: handle error
-            self.telegram_app_hash,
+            TELEGRAM_API_ID, TELEGRAM_API_HASH
         )
 
         # Initialize Telegram ID to IRC nick mapping
@@ -47,17 +50,18 @@ class TelegramHandler(object):
             self.telegram_client.add_event_handler(handler, event)
 
         # Start Telegram client
-        await self.telegram_client.start()
-
+        self.telegram_client.start()
         # Update IRC <-> Telegram mapping
-        telegram_me = await self.telegram_client.get_me()
-        iid = self.irc.irc_nick
-        tid = telegram_me.id
-        self.tid_to_iid[tid] = iid
-        self.irc.iid_to_tid[iid] = tid
-
-        # Join all Telegram channels
-        await self.join_all_telegram_channels()
+        for dialog in self.telegram_client.iter_dialogs():
+            chat = dialog.entity
+            if isinstance(chat, telethon.types.User):
+                user = self.get_telegram_nick(chat)
+                self.tid_to_iid[chat.id] = user
+                self.irc.iid_to_tid[user] = chat.id
+            else:
+                channel = self.get_telegram_channel(chat)
+                self.tid_to_iid[chat.id] = channel
+                self.irc.iid_to_tid[channel] = chat.id
 
     def get_telegram_nick(self, user):
         nick = (user.username

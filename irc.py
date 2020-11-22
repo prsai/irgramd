@@ -10,7 +10,6 @@ import tornado.ioloop
 # Local modules
 
 from utils import chunks
-from telegram import TelegramHandler
 
 # Configuration
 
@@ -23,25 +22,25 @@ IRC_PASS_RX    = re.compile(r'PASS :(?P<app_id>[^\s]+) (?P<app_hash>[^\n\r]+)')
 IRC_PING_RX    = re.compile(r'PING (?P<payload>[^\n\r]+)')
 IRC_PRIVMSG_RX = re.compile(r'PRIVMSG (?P<nick>[^\s]+) :(?P<message>[^\n\r]+)')
 IRC_USER_RX    = re.compile(r'USER (?P<username>[^\s]+) [^\s]+ [^\s]+ :(?P<realname>[^\n\r]+)')
+IRC_JOIN_RX    = re.compile(r'JOIN (?P<channel>[^\s]+)')
 
 # IRC Handler
 
 class IRCHandler(object):
-    def __init__(self, stream, address, config_dir):
+    def __init__(self, config_dir):
         self.logger     = logging.getLogger()
-        self.address    = '{}:{}'.format(address[0], address[1])
-        self.stream     = stream
         self.ioloop     = tornado.ioloop.IOLoop.current()
         self.hostname   = socket.gethostname()
         self.config_dir = config_dir
-        self.tg         = TelegramHandler(self, config_dir)
 
         # Initialize IRC
         self.initialize_irc()
 
-        self.logger.debug('Established client connection from %s', self.address)
 
-    async def run(self):
+    async def run(self, stream, address):
+        self.stream = stream
+        self.address    = '{}:{}'.format(address[0], address[1])
+
         self.logger.debug('Running client connection from %s', self.address)
 
         while True:
@@ -54,6 +53,9 @@ class IRCHandler(object):
                 if matches:
                     await handler(**matches.groupdict())
 
+    def set_telegram(self, tg):
+        self.tg = tg
+
     # IRC
 
     def initialize_irc(self):
@@ -63,6 +65,7 @@ class IRCHandler(object):
             (IRC_PING_RX   , self.handle_irc_ping),
             (IRC_PRIVMSG_RX, self.handle_irc_privmsg),
             (IRC_USER_RX   , self.handle_irc_user),
+            (IRC_JOIN_RX   , self.handle_irc_join),
         )
         self.iid_to_tid   = {}
         self.irc_channels = collections.defaultdict(set)
@@ -99,12 +102,13 @@ class IRCHandler(object):
             self.hostname, self.irc_nick, 'End of MOTD command'
         ))
 
-        await self.tg.initialize_telegram()
+    async def handle_irc_join(self, channel):
+        self.logger.debug('Handling JOIN: %s', channel)
+
+        await self.join_irc_channel(self.irc_nick, channel, True)
 
     async def handle_irc_pass(self, app_id, app_hash):
         self.logger.debug('Handling PASS: %s %s', app_id, app_hash)
-        self.tg.telegram_app_id   = int(app_id)
-        self.tg.telegram_app_hash = app_hash
 
     async def handle_irc_ping(self, payload):
         self.logger.debug('Handling PING: %s', payload)

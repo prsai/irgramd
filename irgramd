@@ -7,12 +7,10 @@ import tornado.ioloop
 import tornado.options
 import tornado.tcpserver
 
-import telethon
-
 # Local modules
 
-from irc import *
-
+from irc import IRCHandler
+from telegram import TelegramHandler
 
 # IRC Telegram Daemon
 
@@ -24,18 +22,24 @@ class IRCTelegramd(tornado.tcpserver.TCPServer):
         self.address    = address or '127.0.0.1'
         self.port       = port
         self.config_dir = config_dir or os.path.expanduser('~/.config/irgramd')
+        self.irc_handler = None
+        self.tg_handler  = None
 
         if not os.path.exists(self.config_dir):
             os.makedirs(self.config_dir)
 
     async def handle_stream(self, stream, address):
-        handler = IRCHandler(stream, address, self.config_dir)
-        await handler.run()
+        await self.irc_handler.run(stream, address)
 
     def run(self):
         self.listen(self.port, self.address)
         self.logger.info('irgramd listening on %s:%s', self.address, self.port)
         self.logger.info('Configuration Directory: %s', self.config_dir)
+
+        self.irc_handler = IRCHandler(self.config_dir)
+        self.tg_handler = TelegramHandler(self.irc_handler, self.config_dir)
+        self.irc_handler.set_telegram(self.tg_handler)
+        self.tg_handler.initialize_telegram()
 
         tornado.ioloop.IOLoop.current().start()
 
