@@ -13,12 +13,13 @@ from utils import chunks
 
 # IRC Regular Expressions
 
-IRC_NICK_RX    = re.compile(r'NICK :(?P<nick>[^\n\r]+)')
-IRC_PASS_RX    = re.compile(r'PASS :(?P<app_id>[^\s]+) (?P<app_hash>[^\n\r]+)')
-IRC_PING_RX    = re.compile(r'PING (?P<payload>[^\n\r]+)')
-IRC_PRIVMSG_RX = re.compile(r'PRIVMSG (?P<nick>[^\s]+) :(?P<message>[^\n\r]+)')
-IRC_USER_RX    = re.compile(r'USER (?P<username>[^\s]+) [^\s]+ [^\s]+ :(?P<realname>[^\n\r]+)')
-IRC_JOIN_RX    = re.compile(r'JOIN (?P<channel>[^\s]+)')
+PREFIX         = r'(:[^ ]+ +|)'
+IRC_NICK_RX    = re.compile(PREFIX + r'NICK +(:|)(?P<nick>[^\n\r]+)')
+IRC_PASS_RX    = re.compile(PREFIX + r'PASS +(:|)(?P<password>[^\n\r]+)')
+IRC_PING_RX    = re.compile(PREFIX + r'PING +(:|)(?P<payload>[^\n\r]+)')
+IRC_PRIVMSG_RX = re.compile(PREFIX + r'PRIVMSG +(?P<nick>[^ ]+) +(:|):(?P<message>[^\n\r]+)')
+IRC_USER_RX    = re.compile(PREFIX + r'USER +(?P<username>[^ ]+) +[^ ]+ +[^ ]+ +(:|)(?P<realname>[^\n\r]+)')
+IRC_JOIN_RX    = re.compile(PREFIX + r'JOIN +(?P<channel>[^ ]+)')
 
 # IRC Handler
 
