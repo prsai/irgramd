@@ -96,17 +96,13 @@ class TelegramHandler(object):
     async def get_telegram_channel_participants(self, tid):
         channel = self.tid_to_iid[tid]
         nicks   = []
-        voices  = set()
         async for user in self.telegram_client.iter_participants(tid):
             user_nick = await self.get_irc_nick_from_telegram_id(user.id, user)
-
-            if isinstance(user.status, telethon.types.UserStatusOnline):
-                voices.add(user_nick)
 
             nicks.append(user_nick)
             self.irc.irc_channels[channel].add(user_nick)
 
-        return nicks, voices
+        return nicks
 
     async def handle_telegram_message(self, event):
         self.logger.debug('Handling Telegram Message: %s', event)

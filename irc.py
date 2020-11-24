@@ -11,10 +11,6 @@ import tornado.ioloop
 
 from utils import chunks
 
-# Configuration
-
-UPDATE_CHANNEL_VOICES_DELAY = 300
-
 # IRC Regular Expressions
 
 IRC_NICK_RX    = re.compile(r'NICK :(?P<nick>[^\n\r]+)')
@@ -70,7 +66,6 @@ class IRCHandler(object):
         self.iid_to_tid   = {}
         self.irc_channels = collections.defaultdict(set)
         self.irc_nick     = None
-        self.irc_voices   = collections.defaultdict(set)
 
     def get_irc_user_mask(self, nick):
         return '{}!{}@{}'.format(nick, nick, self.hostname)
@@ -138,7 +133,7 @@ class IRCHandler(object):
 
         # Add all users to channel
         tid           = self.iid_to_tid[channel]
-        nicks, voices = await self.tg.get_telegram_channel_participants(tid)
+        nicks         = await self.tg.get_telegram_channel_participants(tid)
 
         # Set channel topic
         topic = (await self.tg.telegram_client.get_entity(tid)).title
@@ -152,35 +147,8 @@ class IRCHandler(object):
                 self.hostname, self.irc_nick, channel, ' '.join(chunk)
             ))
 
-        # Update voices
-        await self.update_channel_voices(channel, voices)
-
     async def part_irc_channel(self, nick, channel):
         self.irc_channels[channel].remove(nick)
         await self.send_irc_command(':{} PART {} :'.format(
             self.get_irc_user_mask(nick), channel
         ))
-
-    async def update_channel_voices(self, channel, voices=None):
-        # Get voices for channel if not provided
-        if not voices:
-            tid       = self.iid_to_tid[channel]
-            _, voices = await self.tg.get_telegram_channel_participants(tid)
-
-        # Add new voices
-        for nick in voices:
-            if nick not in self.irc_voices[channel]:
-                self.irc_voices[channel].add(nick)
-                await self.send_irc_command(':{} MODE {} +v {}'.format(
-                    self.hostname, channel, nick,
-                ))
-
-        # Remove old voices
-        for nick in self.irc_voices[channel].difference(voices):
-            self.irc_voices[channel].remove(nick)
-            await self.send_irc_command(':{} MODE {} -v {}'.format(
-                self.hostname, channel, nick,
-            ))
-
-        self.ioloop.call_later(UPDATE_CHANNEL_VOICES_DELAY, self.update_channel_voices, channel)
-
