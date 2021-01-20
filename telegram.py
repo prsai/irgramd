@@ -117,9 +117,10 @@ class TelegramHandler(object):
 
         nick = await self.get_irc_nick_from_telegram_id(event.sender_id)
         for message in event.message.message.splitlines():
-            await self.irc.send_irc_command(':{} PRIVMSG {} :{}'.format(
-                self.irc.get_irc_user_mask(nick), self.irc.irc_nick, message
-            ))
+            for user in self.irc.users:
+                await self.irc.send_irc_command(user, ':{} PRIVMSG {} :{}'.format(
+                    self.irc.get_irc_user_mask(nick), user.irc_nick, message
+                ))
 
     async def handle_telegram_channel_message(self, event):
         self.logger.debug('Handling Telegram Channel Message: %s', event)
@@ -145,9 +146,10 @@ class TelegramHandler(object):
 
         # Send all messages to IRC
         for message in messages:
-            await self.irc.send_irc_command(':{} PRIVMSG {} :{}'.format(
-                self.irc.get_irc_user_mask(nick), channel, message
-            ))
+            for user in self.irc.users:
+                await self.irc.send_irc_command(user, ':{} PRIVMSG {} :{}'.format(
+                    self.irc.get_irc_user_mask(nick), channel, message
+                ))
 
     async def handle_telegram_chat_action(self, event):
         self.logger.debug('Handling Telegram Chat Action: %s', event)

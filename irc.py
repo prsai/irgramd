@@ -29,26 +29,27 @@ class IRCHandler(object):
         self.ioloop     = tornado.ioloop.IOLoop.current()
         self.hostname   = socket.gethostname()
         self.config_dir = config_dir
+        self.users      = []
 
         # Initialize IRC
         self.initialize_irc()
 
 
     async def run(self, stream, address):
-        self.stream = stream
-        self.address    = '{}:{}'.format(address[0], address[1])
+        user = IRCUser(stream, address)
+        self.users.append(user)
 
-        self.logger.debug('Running client connection from %s', self.address)
+        self.logger.debug('Running client connection from %s', user.address)
 
         while True:
-            message = await self.stream.read_until(b'\n')
+            message = await user.stream.read_until(b'\n')
             message = message.decode().rstrip()
             self.logger.debug(message)
 
             for pattern, handler in self.irc_handlers:
                 matches = pattern.match(message)
                 if matches:
-                    await handler(**matches.groupdict())
+                    await handler(user, **matches.groupdict())
 
     def set_telegram(self, tg):
         self.tg = tg
@@ -66,53 +67,53 @@ class IRCHandler(object):
         )
         self.iid_to_tid   = {}
         self.irc_channels = collections.defaultdict(set)
-        self.irc_nick     = None
 
     def get_irc_user_mask(self, nick):
         return '{}!{}@{}'.format(nick, nick, self.hostname)
 
-    async def send_irc_command(self, command):
+    async def send_irc_command(self, user, command):
         self.logger.debug('Send IRC Command: %s', command)
         command = command + '\r\n'
-        self.stream.write(command.encode())
+        user.stream.write(command.encode())
 
-    async def handle_irc_nick(self, nick):
+    async def handle_irc_nick(self, user, nick):
         self.logger.debug('Handling NICK: %s', nick)
 
-        if self.irc_nick in self.iid_to_tid:
-            tid = self.iid_to_tid[self.irc_nick]
-            self.tg.tid_to_iid[tid]  = nick
+        if user.irc_nick in self.iid_to_tid:
+            tid = self.iid_to_tid[user.irc_nick]
+            self.tg.tid_to_iid[tid] = nick
             self.iid_to_tid[nick] = tid
 
-        self.irc_nick = nick
+        user.irc_nick = nick
 
-    async def handle_irc_user(self, username, realname):
+    async def handle_irc_user(self, user, username, realname):
         self.logger.debug('Handling USER: %s, %s', username, realname)
 
-        self.irc_nick = username
+        user.irc_username = username
+        user.irc_realname = realname
 
-        await self.send_irc_command(':{} 001 {} :{}'.format(
-            self.hostname, self.irc_nick, 'Welcome to irgramd'
+        await self.send_irc_command(user, ':{} 001 {} :{}'.format(
+            self.hostname, user.irc_nick, 'Welcome to irgramd'
         ))
-        await self.send_irc_command(':{} 376 {} :{}'.format(
-            self.hostname, self.irc_nick, 'End of MOTD command'
+        await self.send_irc_command(user, ':{} 376 {} :{}'.format(
+            self.hostname, user.irc_nick, 'End of MOTD command'
         ))
 
-    async def handle_irc_join(self, channel):
+    async def handle_irc_join(self, user, channel):
         self.logger.debug('Handling JOIN: %s', channel)
 
-        await self.join_irc_channel(self.irc_nick, channel, True)
+        await self.join_irc_channel(user, channel, True)
 
-    async def handle_irc_pass(self, app_id, app_hash):
+    async def handle_irc_pass(self, user, app_id, app_hash):
         self.logger.debug('Handling PASS: %s %s', app_id, app_hash)
 
-    async def handle_irc_ping(self, payload):
+    async def handle_irc_ping(self, user, payload):
         self.logger.debug('Handling PING: %s', payload)
-        await self.send_irc_command(':{} PONG {} :{}'.format(
+        await self.send_irc_command(user, ':{} PONG {} :{}'.format(
             self.hostname, self.hostname, payload
         ))
 
-    async def handle_irc_privmsg(self, nick, message):
+    async def handle_irc_privmsg(self, user, nick, message):
         self.logger.debug('Handling PRIVMSG: %s, %s', nick, message)
 
         if nick not in self.iid_to_tid:
@@ -121,12 +122,12 @@ class IRCHandler(object):
         telegram_id = self.iid_to_tid[nick]
         await self.tg.telegram_client.send_message(telegram_id, message)
 
-    async def join_irc_channel(self, nick, channel, full_join=False):
-        self.irc_channels[channel].add(nick)
+    async def join_irc_channel(self, user, channel, full_join=False):
+        self.irc_channels[channel].add(user.irc_nick)
 
         # Join Channel
-        await self.send_irc_command(':{} JOIN :{}'.format(
-            self.get_irc_user_mask(nick), channel
+        await self.send_irc_command(user, ':{} JOIN :{}'.format(
+            self.get_irc_user_mask(user.irc_nick), channel
         ))
 
         if not full_join:
@@ -138,18 +139,26 @@ class IRCHandler(object):
 
         # Set channel topic
         topic = (await self.tg.telegram_client.get_entity(tid)).title
-        await self.send_irc_command(':{} TOPIC {} :{}'.format(
-            self.get_irc_user_mask(nick), channel, topic
+        await self.send_irc_command(user, ':{} TOPIC {} :{}'.format(
+            self.get_irc_user_mask(user.irc_nick), channel, topic
         ))
 
         # Send NAMESLIST
         for chunk in chunks(nicks, 25, ''):
-            await self.send_irc_command(':{} 353 {} = {} :{}'.format(
-                self.hostname, self.irc_nick, channel, ' '.join(chunk)
+            await self.send_irc_command(user, ':{} 353 {} = {} :{}'.format(
+                self.hostname, user.irc_nick, channel, ' '.join(chunk)
             ))
 
-    async def part_irc_channel(self, nick, channel):
-        self.irc_channels[channel].remove(nick)
-        await self.send_irc_command(':{} PART {} :'.format(
-            self.get_irc_user_mask(nick), channel
+    async def part_irc_channel(self, user, channel):
+        self.irc_channels[channel].remove(user.irc_nick)
+        await self.send_irc_command(user, ':{} PART {} :'.format(
+            self.get_irc_user_mask(user.irc_nick), channel
         ))
+
+class IRCUser(object):
+    def __init__(self, stream, address):
+        self.stream  = stream
+        self.address = '{}:{}'.format(address[0], address[1])
+        self.irc_nick = None
+        self.irc_username = None
+        self.irc_realname = None
