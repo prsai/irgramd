@@ -2,7 +2,7 @@
 irc_codes = \
 {
   'RPL_WELCOME': ('001', 'Welcome to the irgramd gateway, {}'),
-  'RPL_YOURHOST': ('002', 'Host {} is running irgramd version {}'),
+  'RPL_YOURHOST': ('002', 'Your host is {}, running version irgramd-{}'),
   'RPL_CREATED': ('003', 'This server was created {}'),
   'RPL_MYINFO': ('004', '{} ircgramd {} o nt'),
   'RPL_ISUPPORT': ('005', 'CASEMAPPING=ascii CHANLIMIT=#&+: CHANTYPES=&#+ CHANMODES=,,,nt CHANNELLEN={} NICKLEN={} SAFELIST'),
