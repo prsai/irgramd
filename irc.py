@@ -10,16 +10,17 @@ import tornado.ioloop
 # Local modules
 
 from utils import chunks
+from irc_replies import irc_codes
 
 # IRC Regular Expressions
 
-PREFIX         = r'(:[^ ]+ +|)'
-IRC_NICK_RX    = re.compile(PREFIX + r'NICK +(:|)(?P<nick>[^\n\r]+)')
-IRC_PASS_RX    = re.compile(PREFIX + r'PASS +(:|)(?P<password>[^\n\r]+)')
-IRC_PING_RX    = re.compile(PREFIX + r'PING +(:|)(?P<payload>[^\n\r]+)')
-IRC_PRIVMSG_RX = re.compile(PREFIX + r'PRIVMSG +(?P<nick>[^ ]+) +(:|):(?P<message>[^\n\r]+)')
-IRC_USER_RX    = re.compile(PREFIX + r'USER +(?P<username>[^ ]+) +[^ ]+ +[^ ]+ +(:|)(?P<realname>[^\n\r]+)')
-IRC_JOIN_RX    = re.compile(PREFIX + r'JOIN +(?P<channel>[^ ]+)')
+PREFIX          = r'(:[^ ]+ +|)'
+IRC_NICK_RX     = re.compile(PREFIX + r'NICK( +:| +|\n)(?P<nick>[^\n]+|)')
+IRC_PASS_RX     = re.compile(PREFIX + r'PASS( +:| +|\n)(?P<password>[^\n]+|)')
+IRC_PING_RX     = re.compile(PREFIX + r'PING( +:| +|\n)(?P<payload>[^\n]+|)')
+IRC_PRIVMSG_RX  = re.compile(PREFIX + r'PRIVMSG( +|\n)(?P<nick>[^ ]+)( +:| +|\n)(?P<message>[^\n]+|)')
+IRC_USER_RX     = re.compile(PREFIX + r'USER( +|\n)(?P<username>[^ ]+) +[^ ]+ +[^ ]+( +:| +|\n)(?P<realname>[^\n]+|)')
+IRC_JOIN_RX     = re.compile(PREFIX + r'JOIN( +|\n)(?P<channel>[^ ]+)')
 
 # IRC Handler
 
@@ -43,13 +44,25 @@ class IRCHandler(object):
 
         while True:
             message = await user.stream.read_until(b'\n')
-            message = message.decode().rstrip()
+            message = message.decode()
             self.logger.debug(message)
+            matched = False
 
-            for pattern, handler in self.irc_handlers:
+            for pattern, handler, register_required in self.irc_handlers:
                 matches = pattern.match(message)
                 if matches:
-                    await handler(user, **matches.groupdict())
+                    matched = True
+                    if user.registered or not register_required:
+                        params = matches.groupdict()
+                        num_params = len([x for x in params.values() if x])
+                        num_params_expected = len(params.keys())
+                        if num_params >= num_params_expected:
+                            await handler(user, **params)
+                        else:
+                            await self.reply(user, 'ERR_NEEDMOREPARAMS')
+
+            if not matched and user.registered:
+                await self.reply(user, 'ERR_UNKNOWNCOMMAND')
 
     def set_telegram(self, tg):
         self.tg = tg
@@ -58,12 +71,13 @@ class IRCHandler(object):
 
     def initialize_irc(self):
         self.irc_handlers = (
-            (IRC_NICK_RX   , self.handle_irc_nick),
-            (IRC_PASS_RX   , self.handle_irc_pass),
-            (IRC_PING_RX   , self.handle_irc_ping),
-            (IRC_PRIVMSG_RX, self.handle_irc_privmsg),
-            (IRC_USER_RX   , self.handle_irc_user),
-            (IRC_JOIN_RX   , self.handle_irc_join),
+            # pattern              handle           register_required
+            (IRC_NICK_RX,     self.handle_irc_nick,     False),
+            (IRC_PASS_RX,     self.handle_irc_pass,     False),
+            (IRC_PING_RX,     self.handle_irc_ping,     False),
+            (IRC_PRIVMSG_RX,  self.handle_irc_privmsg,  True),
+            (IRC_USER_RX,     self.handle_irc_user,     False),
+            (IRC_JOIN_RX,     self.handle_irc_join,     True),
         )
         self.iid_to_tid   = {}
         self.irc_channels = collections.defaultdict(set)
@@ -122,6 +136,14 @@ class IRCHandler(object):
         telegram_id = self.iid_to_tid[nick]
         await self.tg.telegram_client.send_message(telegram_id, message)
 
+    # IRC functions
+
+    async def reply(self, user, code):
+        num, tail = irc_codes[code]
+        await self.send_irc_command(user, ':{} {} {} :{}'.format(
+            self.hostname, num, user.irc_nick, tail
+        ))
+
     async def join_irc_channel(self, user, channel, full_join=False):
         self.irc_channels[channel].add(user.irc_nick)
 
@@ -162,3 +184,5 @@ class IRCUser(object):
         self.irc_nick = None
         self.irc_username = None
         self.irc_realname = None
+        self.registered = True
+        self.recv_pass = ''
