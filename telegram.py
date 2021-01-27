@@ -3,6 +3,10 @@ import logging
 import os
 import telethon
 
+# Local modules
+
+from include import CHAN_MAX_LENGHT, NICK_MAX_LENGTH
+
 # Configuration
 
 # GET API_ID and API_HASH from https://my.telegram.org/apps
@@ -11,7 +15,6 @@ import telethon
 TELEGRAM_API_ID             =
 TELEGRAM_API_HASH           = ''
 
-NICK_MAX_LENGTH             = 20
 
     # Telegram
 
