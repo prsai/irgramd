@@ -23,8 +23,9 @@ class TelegramHandler(object):
         self.logger     = logging.getLogger()
         self.config_dir = config_dir
         self.irc        = irc
+        self.authorized = False
 
-    def initialize_telegram(self):
+    async def initialize_telegram(self):
         # Setup media folder
         self.telegram_media_dir = os.path.join(self.config_dir, 'media')
         if not os.path.exists(self.telegram_media_dir):
@@ -53,9 +54,15 @@ class TelegramHandler(object):
             self.telegram_client.add_event_handler(handler, event)
 
         # Start Telegram client
-        self.telegram_client.start()
+        await self.telegram_client.connect()
+
+        if await self.telegram_client.is_user_authorized():
+            self.authorized = True
+            await self.init_mapping()
+
+    async def init_mapping(self):
         # Update IRC <-> Telegram mapping
-        for dialog in self.telegram_client.iter_dialogs():
+        async for dialog in self.telegram_client.iter_dialogs():
             chat = dialog.entity
             if isinstance(chat, telethon.types.User):
                 user = self.get_telegram_nick(chat)
