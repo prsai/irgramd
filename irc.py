@@ -38,7 +38,7 @@ class IRCHandler(object):
         self.ioloop     = tornado.ioloop.IOLoop.current()
         self.hostname   = socket.gethostname()
         self.config_dir = config_dir
-        self.users      = []
+        self.users      = {}
 
         # Initialize IRC
         self.initialize_irc()
@@ -46,7 +46,6 @@ class IRCHandler(object):
 
     async def run(self, stream, address):
         user = IRCUser(stream, address)
-        self.users.append(user)
 
         self.logger.debug('Running client connection from %s', user.address)
 
@@ -114,10 +113,11 @@ class IRCHandler(object):
 
         if not user.valid_nick(nick):
              await self.reply(user, 'ERR_ERRONEUSNICKNAME')
-        elif nick in [x.irc_nick for x in self.users if x is not user]:
+        elif nick in self.users.keys():
             await self.reply(user, 'ERR_NICKNAMEINUSE')
         elif user.password == user.recv_pass:
             user.irc_nick = nick
+            self.users[nick] = user
 
             if user.irc_nick in self.iid_to_tid:
                 tid = self.iid_to_tid[user.irc_nick]

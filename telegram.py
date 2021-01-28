@@ -127,7 +127,7 @@ class TelegramHandler(object):
 
         nick = await self.get_irc_nick_from_telegram_id(event.sender_id)
         for message in event.message.message.splitlines():
-            for user in self.irc.users:
+            for user in self.irc.users.values():
                 await self.irc.send_irc_command(user, ':{} PRIVMSG {} :{}'.format(
                     self.irc.get_irc_user_mask(nick), user.irc_nick, message
                 ))
@@ -156,7 +156,7 @@ class TelegramHandler(object):
 
         # Send all messages to IRC
         for message in messages:
-            for user in self.irc.users:
+            for user in self.irc.users.values():
                 await self.irc.send_irc_command(user, ':{} PRIVMSG {} :{}'.format(
                     self.irc.get_irc_user_mask(nick), channel, message
                 ))
