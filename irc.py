@@ -112,7 +112,7 @@ class IRCHandler(object):
     async def handle_irc_nick(self, user, nick):
         self.logger.debug('Handling NICK: %s', nick)
 
-        if not self.valid_nick(nick):
+        if not user.valid_nick(nick):
              await self.reply(user, 'ERR_ERRONEUSNICKNAME')
         elif nick in [x.irc_nick for x in self.users if x is not user]:
             await self.reply(user, 'ERR_NICKNAMEINUSE')
@@ -234,14 +234,6 @@ class IRCHandler(object):
             self.get_irc_user_mask(user.irc_nick), channel
         ))
 
-    def valid_nick(self, nick):
-        if len(nick) <= NICK_MAX_LENGTH and nick[0] in VALID_IRC_NICK_FIRST_CHARS:
-            for x in nick[1:]:
-                if x not in VALID_IRC_NICK_CHARS:
-                    return 0
-            return 1
-        else: return 0
-
 class IRCUser(object):
     def __init__(self, stream, address):
         self.stream  = stream
@@ -252,3 +244,11 @@ class IRCUser(object):
         self.registered = True
         self.password = ''
         self.recv_pass = ''
+
+    def valid_nick(self, nick):
+        if len(nick) <= NICK_MAX_LENGTH and nick[0] in VALID_IRC_NICK_FIRST_CHARS:
+            for x in nick[1:]:
+                if x not in VALID_IRC_NICK_CHARS:
+                    return 0
+            return 1
+        else: return 0
