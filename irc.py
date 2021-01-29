@@ -50,7 +50,13 @@ class IRCHandler(object):
         self.logger.debug('Running client connection from %s', user.address)
 
         while True:
-            message = await user.stream.read_until(b'\n')
+            try:
+                message = await user.stream.read_until(b'\n')
+            except tornado.iostream.StreamClosedError:
+                if user in self.users.values():
+                    del self.users[user.irc_nick]
+                del user
+                break
             message = message.decode()
             self.logger.debug(message)
             matched = False
@@ -241,7 +247,7 @@ class IRCUser(object):
         self.irc_nick = None
         self.irc_username = None
         self.irc_realname = None
-        self.registered = True
+        self.registered = False
         self.password = ''
         self.recv_pass = ''
 
