@@ -54,7 +54,7 @@ class IRCHandler(object):
                 message = await user.stream.read_until(b'\n')
             except tornado.iostream.StreamClosedError:
                 if user in self.users.values():
-                    del self.users[user.irc_nick]
+                    del self.users[user.irc_nick.lower()]
                 del user
                 break
             message = message.decode()
@@ -119,11 +119,11 @@ class IRCHandler(object):
 
         if not user.valid_nick(nick):
              await self.reply(user, 'ERR_ERRONEUSNICKNAME')
-        elif nick in self.users.keys():
+        elif nick.lower() in self.users.keys():
             await self.reply(user, 'ERR_NICKNAMEINUSE')
         elif user.password == user.recv_pass:
             user.irc_nick = nick
-            self.users[nick] = user
+            self.users[nick.lower()] = user
 
             if user.irc_nick in self.iid_to_tid:
                 tid = self.iid_to_tid[user.irc_nick]
