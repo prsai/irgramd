@@ -72,10 +72,10 @@ class IRCHandler(object):
                         if num_params >= num_params_expected:
                             await handler(user, **params)
                         else:
-                            await self.reply(user, 'ERR_NEEDMOREPARAMS')
+                            await self.reply_code(user, 'ERR_NEEDMOREPARAMS')
 
             if not matched and user.registered:
-                await self.reply(user, 'ERR_UNKNOWNCOMMAND')
+                await self.reply_code(user, 'ERR_UNKNOWNCOMMAND')
 
     def set_telegram(self, tg):
         self.tg = tg
@@ -110,7 +110,7 @@ class IRCHandler(object):
         self.logger.debug('Handling PASS: %s %s', password)
 
         if user.registered:
-            await self.reply(user, 'ERR_ALREADYREGISTRED')
+            await self.reply_code(user, 'ERR_ALREADYREGISTRED')
         else:
             user.recv_pass = password
 
@@ -118,9 +118,9 @@ class IRCHandler(object):
         self.logger.debug('Handling NICK: %s', nick)
 
         if not user.valid_nick(nick):
-             await self.reply(user, 'ERR_ERRONEUSNICKNAME')
+             await self.reply_code(user, 'ERR_ERRONEUSNICKNAME', (nick,), '*')
         elif nick.lower() in self.users.keys():
-            await self.reply(user, 'ERR_NICKNAMEINUSE')
+            await self.reply_code(user, 'ERR_NICKNAMEINUSE', (nick,), '*')
         elif user.password == user.recv_pass:
             user.irc_nick = nick
             self.users[nick.lower()] = user
@@ -134,7 +134,7 @@ class IRCHandler(object):
                 user.registered = True
                 await self.send_greeting(user)
         else:
-            await self.reply(user, 'ERR_PASSWDMISMATCH')
+            await self.reply_code(user, 'ERR_PASSWDMISMATCH')
 
     async def handle_irc_user(self, user, username, realname):
         self.logger.debug('Handling USER: %s, %s', username, realname)
@@ -167,45 +167,37 @@ class IRCHandler(object):
 
     # IRC functions
 
-    async def reply(self, user, code):
+    async def reply_code(self, user, code, params=None, client=None):
         num, tail = irc_codes[code]
-        await self.send_irc_command(user, ':{} {} {} :{}'.format(
-            self.hostname, num, user.irc_nick, tail
-        ))
-
-    async def reply_param(self, user, num, rest):
-        await self.send_irc_command(user, ':{} {} {} {}'.format(
-            self.hostname, num, user.irc_nick, rest
-        ))
+        if params:
+            nick = client if client else user.irc_nick
+            rest = tail.format(*params)
+            stri = ':{} {} {} {}'.format(self.hostname, num, nick, rest)
+        else:
+            stri = ':{} {} {} :{}'.format(self.hostname, num, user.irc_nick, tail)
+        await self.send_irc_command(user, stri)
 
     async def send_greeting(self, user):
-        num, rest = irc_codes['RPL_WELCOME']
-        await self.reply_param(user, num, rest.format(user.irc_nick))
-        num, rest = irc_codes['RPL_YOURHOST']
-        await self.reply_param(user, num, rest.format(self.hostname, VERSION))
-        num, rest = irc_codes['RPL_CREATED']
-        await self.reply_param(user, num, rest.format(self.start_time))
-        num, rest = irc_codes['RPL_MYINFO']
-        await self.reply_param(user, num, rest.format(self.hostname, VERSION))
-        num, rest = irc_codes['RPL_ISUPPORT']
-        await self.reply_param(user, num, rest.format(str(CHAN_MAX_LENGHT), str(NICK_MAX_LENGTH)))
+        await self.reply_code(user, 'RPL_WELCOME', (user.irc_nick,))
+        await self.reply_code(user, 'RPL_YOURHOST', (self.hostname, VERSION))
+        await self.reply_code(user, 'RPL_CREATED', (self.start_time,))
+        await self.reply_code(user, 'RPL_MYINFO', (self.hostname, VERSION))
+        await self.reply_code(user, 'RPL_ISUPPORT', (str(CHAN_MAX_LENGHT), str(NICK_MAX_LENGTH)))
         await self.send_motd(user)
 
     async def send_motd(self, user):
-        num, rest = irc_codes['RPL_MOTDSTART']
-        await self.reply_param(user, num, rest.format(self.hostname))
-        num, rest = irc_codes['RPL_MOTD']
-        await self.reply_param(user, num, rest.format('Welcome to the irgramd server'))
-        await self.reply_param(user, num, rest.format(''))
-        await self.reply_param(user, num, rest.format('This is not a normal IRC server, it\'s a gateway that'))
-        await self.reply_param(user, num, rest.format('allows connecting from an IRC client (the program that'))
-        await self.reply_param(user, num, rest.format('you are [probably] using right now) to the Telegram instant'))
-        await self.reply_param(user, num, rest.format('messaging network as a regular user account (not bot)'))
-        await self.reply_param(user, num, rest.format(''))
-        await self.reply_param(user, num, rest.format('irgramd is an open source project that you can find on'))
-        await self.reply_param(user, num, rest.format('git repository: https://github.com/prsai/irgramd'))
-        await self.reply_param(user, num, rest.format('darcs repository: https://src.presi.org/darcs/irgramd'))
-        await self.reply(user, 'RPL_ENDOFMOTD')
+        await self.reply_code(user, 'RPL_MOTDSTART', (self.hostname,))
+        await self.reply_code(user, 'RPL_MOTD', ('Welcome to the irgramd server',))
+        await self.reply_code(user, 'RPL_MOTD', ('',))
+        await self.reply_code(user, 'RPL_MOTD', ('This is not a normal IRC server, it\'s a gateway that',))
+        await self.reply_code(user, 'RPL_MOTD', ('allows connecting from an IRC client (the program that',))
+        await self.reply_code(user, 'RPL_MOTD', ('you are [probably] using right now) to the Telegram instant',))
+        await self.reply_code(user, 'RPL_MOTD', ('messaging network as a regular user account (not bot)',))
+        await self.reply_code(user, 'RPL_MOTD', ('',))
+        await self.reply_code(user, 'RPL_MOTD', ('irgramd is an open source project that you can find on',))
+        await self.reply_code(user, 'RPL_MOTD', ('git repository: https://github.com/prsai/irgramd',))
+        await self.reply_code(user, 'RPL_MOTD', ('darcs repository: https://src.presi.org/darcs/irgramd',))
+        await self.reply_code(user, 'RPL_ENDOFMOTD')
 
     async def join_irc_channel(self, user, channel, full_join=False):
         self.irc_channels[channel].add(user.irc_nick)
