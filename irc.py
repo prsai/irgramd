@@ -47,7 +47,7 @@ class IRCHandler(object):
     async def run(self, stream, address):
         user = IRCUser(stream, address)
 
-        self.logger.debug('Running client connection from %s', user.address)
+        self.logger.debug('Running client connection from %s:%s', address[0], address[1])
 
         while True:
             try:
@@ -200,7 +200,7 @@ class IRCHandler(object):
         await self.reply_code(user, 'RPL_ENDOFMOTD')
 
     async def join_irc_channel(self, user, channel, full_join=False):
-        self.irc_channels[channel].add(user.irc_nick)
+        self.irc_channels[channel.lower()].add(user.irc_nick)
 
         # Join Channel
         await self.send_irc_command(user, ':{} JOIN :{}'.format(
@@ -210,9 +210,9 @@ class IRCHandler(object):
         if not full_join:
             return
 
-        # Add all users to channel
-        tid           = self.iid_to_tid[channel]
-        nicks         = await self.tg.get_telegram_channel_participants(tid)
+        # Get all users from channel
+        tid = self.iid_to_tid[channel.lower()]
+        nicks = self.irc_channels[channel.lower()]
 
         # Set channel topic
         topic = (await self.tg.telegram_client.get_entity(tid)).title
@@ -233,12 +233,12 @@ class IRCHandler(object):
         ))
 
 class IRCUser(object):
-    def __init__(self, stream, address):
+    def __init__(self, stream, address, irc_nick=None, username=None, realname=None):
         self.stream  = stream
-        self.address = '{}:{}'.format(address[0], address[1])
-        self.irc_nick = None
-        self.irc_username = None
-        self.irc_realname = None
+        self.address = address[0]
+        self.irc_nick = irc_nick
+        self.irc_username = str(username) if type(username) is int else username
+        self.irc_realname = realname
         self.registered = False
         self.password = ''
         self.recv_pass = ''

@@ -6,6 +6,7 @@ import telethon
 # Local modules
 
 from include import CHAN_MAX_LENGHT, NICK_MAX_LENGTH
+from irc import IRCUser
 
 # Configuration
 
@@ -65,25 +66,47 @@ class TelegramHandler(object):
         async for dialog in self.telegram_client.iter_dialogs():
             chat = dialog.entity
             if isinstance(chat, telethon.types.User):
-                user = self.get_telegram_nick(chat)
-                self.tid_to_iid[chat.id] = user
-                self.irc.iid_to_tid[user] = chat.id
+                if not chat.is_self:
+                    self.set_ircuser_from_telegram(chat)
             else:
-                channel = self.get_telegram_channel(chat)
-                self.tid_to_iid[chat.id] = channel
-                self.irc.iid_to_tid[channel] = chat.id
+                await self.set_irc_channel_from_telegram(chat)
+
+    def set_ircuser_from_telegram(self, user):
+        if user.id not in self.tid_to_iid:
+            tg_nick = self.get_telegram_nick(user)
+            irc_user = IRCUser(None, ('Telegram',), tg_nick, user.id, self.get_telegram_display_name(user))
+            self.irc.users[tg_nick.lower()] = irc_user
+            self.tid_to_iid[user.id] = tg_nick
+            self.irc.iid_to_tid[tg_nick.lower()] = user.id
+        else:
+            tg_nick = self.tid_to_iid[user.id]
+        return tg_nick
+
+    async def set_irc_channel_from_telegram(self, chat):
+        channel = self.get_telegram_channel(chat)
+        self.tid_to_iid[chat.id] = channel
+        self.irc.iid_to_tid[channel.lower()] = chat.id
+        # Add users from the channel
+        for user in [x async for x in self.telegram_client.iter_participants(chat.id) if not x.is_self]:
+            user_nick = self.set_ircuser_from_telegram(user)
+            self.irc.irc_channels[channel.lower()].add(user_nick)
 
     def get_telegram_nick(self, user):
         nick = (user.username
-                or telethon.utils.get_display_name(user)
+                or self.get_telegram_display_name(user)
                 or str(user.id))
-        nick = nick.replace(' ', '')[:NICK_MAX_LENGTH]
+        nick = nick[:NICK_MAX_LENGTH]
         while nick in self.irc.iid_to_tid:
             nick += '_'
         return nick
 
+    def get_telegram_display_name(self, user):
+        name = telethon.utils.get_display_name(user)
+        name = name.replace(' ', '_')
+        return name
+
     def get_telegram_channel(self, chat):
-        return '#' + chat.title.lower().replace(' ', '-')
+        return '#' + chat.title.replace(' ', '-')
 
     async def get_irc_nick_from_telegram_id(self, tid, entity=None):
         if tid not in self.tid_to_iid:
@@ -127,7 +150,7 @@ class TelegramHandler(object):
 
         nick = await self.get_irc_nick_from_telegram_id(event.sender_id)
         for message in event.message.message.splitlines():
-            for user in self.irc.users.values():
+            for user in [x for x in self.irc.users.values() if x.stream]:
                 await self.irc.send_irc_command(user, ':{} PRIVMSG {} :{}'.format(
                     self.irc.get_irc_user_mask(nick), user.irc_nick, message
                 ))
@@ -138,12 +161,12 @@ class TelegramHandler(object):
         # Join IRC channel if not already in it
         entity  = await event.message.get_chat()
         channel = await self.get_irc_channel_from_telegram_id(event.message.chat_id, entity)
-        if channel not in self.irc.irc_channels:
-            await self.irc.join_irc_channel(self.irc.irc_nick, channel, True)
+#        if channel not in self.irc.irc_channels:
+#            await self.irc.join_irc_channel(self.irc.irc_nick, channel, True)
 
         nick = await self.get_irc_nick_from_telegram_id(event.sender_id)
-        if nick not in self.irc.irc_channels[channel]:
-            await self.irc.join_irc_channel(nick, channel, False)
+#        if nick not in self.irc.irc_channels[channel]:
+#            await self.irc.join_irc_channel(nick, channel, False)
 
         # Format messages with media
         messages = event.message.message.splitlines() if event.message.message else []
@@ -156,7 +179,7 @@ class TelegramHandler(object):
 
         # Send all messages to IRC
         for message in messages:
-            for user in self.irc.users.values():
+            for user in [x for x in self.irc.users.values() if x.stream]:
                 await self.irc.send_irc_command(user, ':{} PRIVMSG {} :{}'.format(
                     self.irc.get_irc_user_mask(nick), channel, message
                 ))
