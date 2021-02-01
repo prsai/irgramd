@@ -96,8 +96,6 @@ class IRCHandler(object):
         self.irc_channels = collections.defaultdict(set)
         self.start_time   = time.strftime('%a %d %b %Y %H:%M:%S %z')
 
-    def get_irc_user_mask(self, nick):
-        return '{}!{}@{}'.format(nick, nick, self.hostname)
 
     async def send_irc_command(self, user, command):
         self.logger.debug('Send IRC Command: %s', command)
@@ -204,7 +202,7 @@ class IRCHandler(object):
 
         # Join Channel
         await self.send_irc_command(user, ':{} JOIN :{}'.format(
-            self.get_irc_user_mask(user.irc_nick), channel
+            user.get_irc_mask(), channel
         ))
 
         if not full_join:
@@ -217,7 +215,7 @@ class IRCHandler(object):
         # Set channel topic
         topic = (await self.tg.telegram_client.get_entity(tid)).title
         await self.send_irc_command(user, ':{} TOPIC {} :{}'.format(
-            self.get_irc_user_mask(user.irc_nick), channel, topic
+            user.get_irc_mask(), channel, topic
         ))
 
         # Send NAMESLIST
@@ -229,7 +227,7 @@ class IRCHandler(object):
     async def part_irc_channel(self, user, channel):
         self.irc_channels[channel].remove(user.irc_nick)
         await self.send_irc_command(user, ':{} PART {} :'.format(
-            self.get_irc_user_mask(user.irc_nick), channel
+            user.get_irc_mask(), channel
         ))
 
 class IRCUser(object):
@@ -242,6 +240,9 @@ class IRCUser(object):
         self.registered = False
         self.password = ''
         self.recv_pass = ''
+
+    def get_irc_mask(self):
+        return '{}!{}@{}'.format(self.irc_nick, self.irc_username, self.address)
 
     def valid_nick(self, nick):
         if len(nick) <= NICK_MAX_LENGTH and nick[0] in VALID_IRC_NICK_FIRST_CHARS:

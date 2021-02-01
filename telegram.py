@@ -108,6 +108,10 @@ class TelegramHandler(object):
     def get_telegram_channel(self, chat):
         return '#' + chat.title.replace(' ', '-')
 
+    def get_irc_user_from_telegram(self, tid):
+        nick = self.tid_to_iid[tid]
+        return self.irc.users[nick.lower()]
+
     async def get_irc_nick_from_telegram_id(self, tid, entity=None):
         if tid not in self.tid_to_iid:
             user = entity or await self.telegram_client.get_entity(tid)
@@ -148,11 +152,11 @@ class TelegramHandler(object):
     async def handle_telegram_private_message(self, event):
         self.logger.debug('Handling Telegram Private Message: %s', event)
 
-        nick = await self.get_irc_nick_from_telegram_id(event.sender_id)
+        user = self.get_irc_user_from_telegram(event.sender_id)
         for message in event.message.message.splitlines():
-            for user in [x for x in self.irc.users.values() if x.stream]:
-                await self.irc.send_irc_command(user, ':{} PRIVMSG {} :{}'.format(
-                    self.irc.get_irc_user_mask(nick), user.irc_nick, message
+            for irc_user in [x for x in self.irc.users.values() if x.stream]:
+                await self.irc.send_irc_command(irc_user, ':{} PRIVMSG {} :{}'.format(
+                    user.get_irc_mask(), irc_user.irc_nick, message
                 ))
 
     async def handle_telegram_channel_message(self, event):
@@ -164,7 +168,8 @@ class TelegramHandler(object):
 #        if channel not in self.irc.irc_channels:
 #            await self.irc.join_irc_channel(self.irc.irc_nick, channel, True)
 
-        nick = await self.get_irc_nick_from_telegram_id(event.sender_id)
+        user = self.get_irc_user_from_telegram(event.sender_id)
+
 #        if nick not in self.irc.irc_channels[channel]:
 #            await self.irc.join_irc_channel(nick, channel, False)
 
@@ -179,9 +184,9 @@ class TelegramHandler(object):
 
         # Send all messages to IRC
         for message in messages:
-            for user in [x for x in self.irc.users.values() if x.stream]:
-                await self.irc.send_irc_command(user, ':{} PRIVMSG {} :{}'.format(
-                    self.irc.get_irc_user_mask(nick), channel, message
+            for irc_user in [x for x in self.irc.users.values() if x.stream]:
+                await self.irc.send_irc_command(irc_user, ':{} PRIVMSG {} :{}'.format(
+                    user.get_irc_mask(), channel, message
                 ))
 
     async def handle_telegram_chat_action(self, event):
