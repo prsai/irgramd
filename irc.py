@@ -94,6 +94,8 @@ class IRCHandler(object):
         )
         self.iid_to_tid   = {}
         self.irc_channels = collections.defaultdict(set)
+        self.irc_channels_ops = collections.defaultdict(set)
+        self.irc_channels_founder = {}
         self.start_time   = time.strftime('%a %d %b %Y %H:%M:%S %z')
 
 
@@ -198,7 +200,8 @@ class IRCHandler(object):
         await self.reply_code(user, 'RPL_ENDOFMOTD')
 
     async def join_irc_channel(self, user, channel, full_join=False):
-        self.irc_channels[channel.lower()].add(user.irc_nick)
+        chan = channel.lower()
+        self.irc_channels[chan].add(user.irc_nick)
 
         # Join Channel
         await self.send_irc_command(user, ':{} JOIN :{}'.format(

@@ -2,6 +2,7 @@
 import logging
 import os
 import telethon
+from telethon import types as tgty
 
 # Local modules
 
@@ -65,7 +66,7 @@ class TelegramHandler(object):
         # Update IRC <-> Telegram mapping
         async for dialog in self.telegram_client.iter_dialogs():
             chat = dialog.entity
-            if isinstance(chat, telethon.types.User):
+            if isinstance(chat, tgty.User):
                 if not chat.is_self:
                     self.set_ircuser_from_telegram(chat)
             else:
@@ -86,10 +87,18 @@ class TelegramHandler(object):
         channel = self.get_telegram_channel(chat)
         self.tid_to_iid[chat.id] = channel
         self.irc.iid_to_tid[channel.lower()] = chat.id
+        chan = channel.lower()
         # Add users from the channel
-        for user in [x async for x in self.telegram_client.iter_participants(chat.id) if not x.is_self]:
+        async for user in self.telegram_client.iter_participants(chat.id):
             user_nick = self.set_ircuser_from_telegram(user)
-            self.irc.irc_channels[channel.lower()].add(user_nick)
+            if not user.is_self:
+                self.irc.irc_channels[chan].add(user_nick)
+            # Add admin users as ops in irc
+            if isinstance(user.participant, tgty.ChatParticipantAdmin):
+                self.irc.irc_channels_ops[chan].add(user_nick)
+            # Add creator users as founders in irc
+            elif isinstance(user.participant, tgty.ChatParticipantCreator):
+                self.irc.irc_channels_founder[chan] = user_nick
 
     def get_telegram_nick(self, user):
         nick = (user.username
@@ -216,7 +225,7 @@ class TelegramHandler(object):
     async def join_all_telegram_channels(self):
         async for dialog in self.telegram_client.iter_dialogs():
             chat = dialog.entity
-            if not isinstance(chat, telethon.types.User):
+            if not isinstance(chat, tgty.User):
                 channel = self.get_telegram_channel(chat)
                 self.tid_to_iid[chat.id] = channel
                 self.irc.iid_to_tid[channel] = chat.id
