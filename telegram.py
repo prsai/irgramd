@@ -26,6 +26,8 @@ class TelegramHandler(object):
         self.config_dir = config_dir
         self.irc        = irc
         self.authorized = False
+        self.id	= None
+        self.tg_username = None
 
     async def initialize_telegram(self):
         # Setup media folder
@@ -64,21 +66,25 @@ class TelegramHandler(object):
 
     async def init_mapping(self):
         # Update IRC <-> Telegram mapping
+        tg_user = await self.telegram_client.get_me()
+        self.id = tg_user.id
+        self.tg_username = self.get_telegram_nick(tg_user)
         async for dialog in self.telegram_client.iter_dialogs():
             chat = dialog.entity
             if isinstance(chat, tgty.User):
-                if not chat.is_self:
-                    self.set_ircuser_from_telegram(chat)
+                self.set_ircuser_from_telegram(chat)
             else:
                 await self.set_irc_channel_from_telegram(chat)
 
     def set_ircuser_from_telegram(self, user):
         if user.id not in self.tid_to_iid:
             tg_nick = self.get_telegram_nick(user)
-            irc_user = IRCUser(None, ('Telegram',), tg_nick, user.id, self.get_telegram_display_name(user))
-            self.irc.users[tg_nick.lower()] = irc_user
+            tg_ni = tg_nick.lower()
+            if not user.is_self:
+                irc_user = IRCUser(None, ('Telegram',), tg_nick, user.id, self.get_telegram_display_name(user))
+                self.irc.users[tg_ni] = irc_user
             self.tid_to_iid[user.id] = tg_nick
-            self.irc.iid_to_tid[tg_nick.lower()] = user.id
+            self.irc.iid_to_tid[tg_ni] = user.id
         else:
             tg_nick = self.tid_to_iid[user.id]
         return tg_nick
@@ -119,6 +125,7 @@ class TelegramHandler(object):
 
     def get_irc_user_from_telegram(self, tid):
         nick = self.tid_to_iid[tid]
+        if nick == self.tg_username: return None
         return self.irc.users[nick.lower()]
 
     async def get_irc_nick_from_telegram_id(self, tid, entity=None):
@@ -164,8 +171,9 @@ class TelegramHandler(object):
         user = self.get_irc_user_from_telegram(event.sender_id)
         for message in event.message.message.splitlines():
             for irc_user in [x for x in self.irc.users.values() if x.stream]:
+                usr = user if user else irc_user
                 await self.irc.send_irc_command(irc_user, ':{} PRIVMSG {} :{}'.format(
-                    user.get_irc_mask(), irc_user.irc_nick, message
+                    usr.get_irc_mask(), irc_user.irc_nick, message
                 ))
 
     async def handle_telegram_channel_message(self, event):
@@ -194,8 +202,9 @@ class TelegramHandler(object):
         # Send all messages to IRC
         for message in messages:
             for irc_user in [x for x in self.irc.users.values() if x.stream]:
+                usr = user if user else irc_user
                 await self.irc.send_irc_command(irc_user, ':{} PRIVMSG {} :{}'.format(
-                    user.get_irc_mask(), channel, message
+                    usr.get_irc_mask(), channel, message
                 ))
 
     async def handle_telegram_chat_action(self, event):

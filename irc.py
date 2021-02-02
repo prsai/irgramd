@@ -159,10 +159,13 @@ class IRCHandler(object):
     async def handle_irc_privmsg(self, user, nick, message):
         self.logger.debug('Handling PRIVMSG: %s, %s', nick, message)
 
-        if nick not in self.iid_to_tid:
+        target = self.tg.tg_username if nick == user.irc_nick else nick
+        tgt = target.lower()
+
+        if tgt not in self.iid_to_tid:
             print('TODO: handle error')
 
-        telegram_id = self.iid_to_tid[nick]
+        telegram_id = self.iid_to_tid[tgt]
         await self.tg.telegram_client.send_message(telegram_id, message)
 
     # IRC functions
