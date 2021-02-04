@@ -104,7 +104,7 @@ class TelegramHandler(object):
                 self.irc.irc_channels_ops[chan].add(user_nick)
             # Add creator users as founders in irc
             elif isinstance(user.participant, tgty.ChatParticipantCreator):
-                self.irc.irc_channels_founder[chan] = user_nick
+                self.irc.irc_channels_founder[chan].add(user_nick)
 
     def get_telegram_nick(self, user):
         nick = (user.username

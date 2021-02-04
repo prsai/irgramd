@@ -55,6 +55,7 @@ class IRCHandler(object):
             except tornado.iostream.StreamClosedError:
                 if user in self.users.values():
                     del self.users[user.irc_nick.lower()]
+                    user.del_from_channels(self)
                 del user
                 break
             message = message.decode()
@@ -97,7 +98,7 @@ class IRCHandler(object):
         self.iid_to_tid   = {}
         self.irc_channels = collections.defaultdict(set)
         self.irc_channels_ops = collections.defaultdict(set)
-        self.irc_channels_founder = {}
+        self.irc_channels_founder = collections.defaultdict(set)
         self.start_time   = time.strftime('%a %d %b %Y %H:%M:%S %z')
 
 
@@ -207,6 +208,9 @@ class IRCHandler(object):
     async def join_irc_channel(self, user, channel, full_join=False):
         chan = channel.lower()
         self.irc_channels[chan].add(user.irc_nick)
+        op = self.get_irc_op(self.tg.tg_username, channel)
+        if op == '@': self.irc_channels_ops[chan].add(user.irc_nick)
+        elif op == '~': self.irc_channels_founder[chan].add(user.irc_nick)
 
         # Join Channel
         await self.send_irc_command(user, ':{} JOIN :{}'.format(
@@ -238,6 +242,15 @@ class IRCHandler(object):
             user.get_irc_mask(), channel
         ))
 
+    def get_irc_op(self, nick, channel):
+        chan = channel.lower()
+        if chan in self.irc_channels.keys():
+            if nick in self.irc_channels_ops[chan]:
+                return '@'
+            if nick in self.irc_channels_founder[chan]:
+                return '~'
+        return ''
+
 class IRCUser(object):
     def __init__(self, stream, address, irc_nick=None, username=None, realname=None):
         self.stream  = stream
@@ -259,3 +272,9 @@ class IRCUser(object):
                     return 0
             return 1
         else: return 0
+
+    def del_from_channels(self, irc, channels=None):
+        for chan in channels if channels else irc.irc_channels.keys():
+            irc.irc_channels[chan].discard(self.irc_nick)
+            irc.irc_channels_ops[chan].discard(self.irc_nick)
+            irc.irc_channels_founder[chan].discard(self.irc_nick)
