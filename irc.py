@@ -29,6 +29,7 @@ IRC_PING_RX     = re.compile(PREFIX + r'PING( +:| +|\n)(?P<payload>[^\n]+|)')
 IRC_PRIVMSG_RX  = re.compile(PREFIX + r'PRIVMSG( +|\n)(?P<nick>[^ ]+)( +:| +|\n)(?P<message>[^\n]+|)')
 IRC_USER_RX     = re.compile(PREFIX + r'USER( +|\n)(?P<username>[^ ]+) +[^ ]+ +[^ ]+( +:| +|\n)(?P<realname>[^\n]+|)')
 IRC_JOIN_RX     = re.compile(PREFIX + r'JOIN( +|\n)(?P<channel>[^ ]+)')
+IRC_WHO_RX      = re.compile(PREFIX + r'WHO( +:| +|\n)(?P<target>[^\n]+|)')
 
 # IRC Handler
 
@@ -94,6 +95,7 @@ class IRCHandler(object):
             (IRC_PRIVMSG_RX,  self.handle_irc_privmsg,  True),
             (IRC_USER_RX,     self.handle_irc_user,     False),
             (IRC_JOIN_RX,     self.handle_irc_join,     True),
+            (IRC_WHO_RX,      self.handle_irc_who,      True),
         )
         self.iid_to_tid   = {}
         self.irc_channels = collections.defaultdict(set)
@@ -158,6 +160,27 @@ class IRCHandler(object):
         await self.send_irc_command(user, ':{} PONG {} :{}'.format(
             self.hostname, self.hostname, payload
         ))
+
+    async def handle_irc_who(self, user, target):
+        self.logger.debug('Handling WHO: %s', target)
+        tgt = target.lower()
+        if tgt in self.irc_channels.keys():
+            users = self.irc_channels[tgt]
+            chan = target
+        elif tgt in self.users.keys():
+            users = (self.users[tgt],)
+            chan = '*'
+        else:
+            await self.reply_code(user, 'ERR_NOSUCHSERVER', (target,))
+            return
+        for usr in users:
+            if not isinstance(usr,IRCUser):
+                usr = self.users[usr.lower()]
+            op = self.get_irc_op(usr.irc_nick, chan)
+            await self.reply_code(user, 'RPL_WHOREPLY', (chan, usr.irc_username,
+                usr.address, self.hostname, usr.irc_nick, op, usr.irc_realname
+            ))
+        await self.reply_code(user, 'RPL_ENDOFWHO', (chan,))
 
     async def handle_irc_privmsg(self, user, nick, message):
         self.logger.debug('Handling PRIVMSG: %s, %s', nick, message)
