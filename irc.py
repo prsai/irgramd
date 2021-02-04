@@ -67,6 +67,8 @@ class IRCHandler(object):
                     matched = True
                     if user.registered or not register_required:
                         params = matches.groupdict()
+                        # Remove possible extra characters in parameters
+                        params = {x:y.strip() for x,y in params.items()}
                         num_params = len([x for x in params.values() if x])
                         num_params_expected = len(params.keys())
                         if num_params >= num_params_expected:
