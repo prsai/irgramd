@@ -30,6 +30,7 @@ IRC_PRIVMSG_RX  = re.compile(PREFIX + r'PRIVMSG( +|\n)(?P<nick>[^ ]+)( +:| +|\n)
 IRC_USER_RX     = re.compile(PREFIX + r'USER( +|\n)(?P<username>[^ ]+) +[^ ]+ +[^ ]+( +:| +|\n)(?P<realname>[^\n]+|)')
 IRC_JOIN_RX     = re.compile(PREFIX + r'JOIN( +|\n)(?P<channel>[^ ]+)')
 IRC_WHO_RX      = re.compile(PREFIX + r'WHO( +:| +|\n)(?P<target>[^\n]+|)')
+IRC_WHOIS_RX    = re.compile(PREFIX + r'WHOIS( +:| +|\n)(?P<nicks>[^\n]+|)')
 
 # IRC Handler
 
@@ -96,6 +97,7 @@ class IRCHandler(object):
             (IRC_USER_RX,     self.handle_irc_user,     False),
             (IRC_JOIN_RX,     self.handle_irc_join,     True),
             (IRC_WHO_RX,      self.handle_irc_who,      True),
+            (IRC_WHOIS_RX,    self.handle_irc_whois,    True),
         )
         self.iid_to_tid   = {}
         self.irc_channels = collections.defaultdict(set)
@@ -181,6 +183,33 @@ class IRCHandler(object):
                 usr.address, self.hostname, usr.irc_nick, op, usr.irc_realname
             ))
         await self.reply_code(user, 'RPL_ENDOFWHO', (chan,))
+
+    async def handle_irc_whois(self, user, nicks):
+        self.logger.debug('Handling WHO: %s', nicks)
+        for nick in nicks.split(','):
+            ni = nick.lower()
+            real_ni = self.users[ni].irc_nick
+            if ni in self.users.keys():
+                usr = self.users[ni]
+                await self.reply_code(user, 'RPL_WHOISUSER', (real_ni, usr.irc_username, usr.address, usr.irc_realname))
+                await self.reply_code(user, 'RPL_WHOISSERVER', (real_ni, self.hostname))
+                chans = usr.get_channels(self)
+                if chans: await self.reply_code(user, 'RPL_WHOISCHANNELS', (real_ni, chans))
+                idle = await self.tg.get_telegram_idle(ni)
+                if idle != None: await self.reply_code(user, 'RPL_WHOISIDLE', (real_ni, idle))
+                if usr.oper: await self.reply_code(user, 'RPL_WHOISOPERATOR', (real_ni,))
+                if usr.stream: await self.reply_code(user, 'RPL_WHOISACCOUNT', (real_ni,
+                                   '{}!{}@Telegram'.format(self.tg.tg_username, self.tg.id
+                               )))
+                if await self.tg.is_bot(ni):
+                    await self.reply_code(user, 'RPL_WHOISBOT', (real_ni,))
+                elif usr.tls or not usr.stream:
+                    proto = 'TLS' if usr.tls else 'MTProto'
+                    server = self.hostname if usr.stream else 'Telegram'
+                    await self.reply_code(user, 'RPL_WHOISSECURE', (real_ni, proto, server))
+                await self.reply_code(user, 'RPL_ENDOFWHOIS', (real_ni,))
+            else:
+                await self.reply_code(user, 'ERR_NOSUCHNICK', (nick,))
 
     async def handle_irc_privmsg(self, user, nick, message):
         self.logger.debug('Handling PRIVMSG: %s, %s', nick, message)
@@ -284,9 +313,19 @@ class IRCUser(object):
         self.registered = False
         self.password = ''
         self.recv_pass = ''
+        self.oper = False
+        self.tls = False
+        self.bot = None
 
     def get_irc_mask(self):
         return '{}!{}@{}'.format(self.irc_nick, self.irc_username, self.address)
+
+    def get_channels(self, irc):
+        res = ''
+        for chan in irc.irc_channels.keys():
+            if self.irc_nick in irc.irc_channels[chan]:
+                res += irc.get_irc_op(self.irc_nick, chan) + chan + ' '
+        return res
 
     def valid_nick(self, nick):
         if len(nick) <= NICK_MAX_LENGTH and nick[0] in VALID_IRC_NICK_FIRST_CHARS:

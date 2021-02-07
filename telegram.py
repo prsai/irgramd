@@ -1,6 +1,7 @@
 
 import logging
 import os
+import datetime
 import telethon
 from telethon import types as tgty
 
@@ -156,6 +157,45 @@ class TelegramHandler(object):
             self.irc.irc_channels[channel].add(user_nick)
 
         return nicks
+
+    async def get_telegram_idle(self, irc_nick, tid=None):
+        tid = self.get_tid(irc_nick, tid)
+        user = await self.telegram_client.get_entity(tid)
+        if isinstance(user.status,tgty.UserStatusRecently) or \
+           isinstance(user.status,tgty.UserStatusOnline):
+            idle = 0
+        elif isinstance(user.status,tgty.UserStatusOffline):
+            last = user.status.was_online
+            current = datetime.datetime.now(datetime.timezone.utc)
+            idle = int((current - last).total_seconds())
+        elif isinstance(user.status,tgty.UserStatusLastWeek):
+            idle = 604800
+        elif isinstance(user.status,tgty.UserStatusLastMonth):
+            idle = 2678400
+        else:
+            idle = None
+        return idle
+
+    async def is_bot(self, irc_nick, tid=None):
+        if self.irc.users[irc_nick].stream:
+            bot = False
+        else:
+            bot = self.irc.users[irc_nick].bot
+        if bot == None:
+            tid = self.get_tid(irc_nick, tid)
+            user = await self.telegram_client.get_entity(tid)
+            bot = user.bot
+            self.irc.users[irc_nick].bot = bot
+        return bot
+
+    def get_tid(self, irc_nick, tid=None):
+        if tid:
+            pass
+        elif irc_nick in self.irc.iid_to_tid:
+            tid = self.irc.iid_to_tid[irc_nick.lower()]
+        else:
+            tid = self.id
+        return tid
 
     async def handle_telegram_message(self, event):
         self.logger.debug('Handling Telegram Message: %s', event)
