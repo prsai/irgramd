@@ -160,9 +160,8 @@ class IRCHandler(object):
 
     async def handle_irc_ping(self, user, payload):
         self.logger.debug('Handling PING: %s', payload)
-        await self.send_irc_command(user, ':{} PONG {} :{}'.format(
-            self.hostname, self.hostname, payload
-        ))
+
+        await self.reply_command(user, SRV, 'PONG', (self.hostname, payload))
 
     async def handle_irc_who(self, user, target):
         self.logger.debug('Handling WHO: %s', target)
