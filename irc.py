@@ -17,6 +17,7 @@ from utils import chunks
 
 # Constants
 
+SRV = None
 VALID_IRC_NICK_FIRST_CHARS   = string.ascii_letters + '[]\`_^{|}'
 VALID_IRC_NICK_CHARS         = VALID_IRC_NICK_FIRST_CHARS + string.digits + '-'
 
@@ -124,19 +125,19 @@ class IRCHandler(object):
     async def handle_irc_nick(self, user, nick):
         self.logger.debug('Handling NICK: %s', nick)
 
+        ni = nick.lower()
         if not user.valid_nick(nick):
-             await self.reply_code(user, 'ERR_ERRONEUSNICKNAME', (nick,), '*')
-        elif nick.lower() in self.users.keys():
+            await self.reply_code(user, 'ERR_ERRONEUSNICKNAME', (nick,), '*')
+        elif ni in self.users.keys():
             await self.reply_code(user, 'ERR_NICKNAMEINUSE', (nick,), '*')
         elif user.password == user.recv_pass:
+            if user.registered:
+                # rename
+                for usr in [x for x in self.users.values() if x.stream]:
+                    await self.reply_command(usr, user, 'NICK', (nick,))
+                del self.users[user.irc_nick.lower()]
             user.irc_nick = nick
-            self.users[nick.lower()] = user
-
-            if user.irc_nick in self.iid_to_tid:
-                tid = self.iid_to_tid[user.irc_nick]
-                self.tg.tid_to_iid[tid] = nick
-                self.iid_to_tid[nick] = tid
-
+            self.users[ni] = user
             if not user.registered and user.irc_username:
                 user.registered = True
                 await self.send_greeting(user)
@@ -224,6 +225,18 @@ class IRCHandler(object):
         await self.tg.telegram_client.send_message(telegram_id, message)
 
     # IRC functions
+
+    async def reply_command(self, user, prfx, comm, params):
+        if prfx == SRV:
+            prefix = self.hostname
+        else:
+            prefix = prfx.get_irc_mask()
+        p = len(params)
+        if p == 1:
+            fstri = ':{} {} {}'
+        else:
+            fstri = ':{} {}' + ((p - 1) * ' {}') + ' :{}'
+        await self.send_irc_command(user, fstri.format(prefix, comm, *params))
 
     async def reply_code(self, user, code, params=None, client=None):
         num, tail = irc_codes[code]
