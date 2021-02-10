@@ -320,7 +320,7 @@ class IRCUser(object):
         self.stream  = stream
         self.address = address[0]
         self.irc_nick = irc_nick
-        self.irc_username = str(username) if type(username) is int else username
+        self.irc_username = str(username)
         self.irc_realname = realname
         self.registered = False
         self.password = ''
