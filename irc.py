@@ -226,10 +226,7 @@ class IRCHandler(object):
     # IRC functions
 
     async def reply_command(self, user, prfx, comm, params):
-        if prfx == SRV:
-            prefix = self.hostname
-        else:
-            prefix = prfx.get_irc_mask()
+        prefix = self.hostname if prfx == SRV else prfx.get_irc_mask()
         p = len(params)
         if p == 1:
             fstri = ':{} {} {}'
