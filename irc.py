@@ -29,7 +29,7 @@ IRC_PASS_RX     = re.compile(PREFIX + r'PASS( +:| +|\n)(?P<password>[^\n]+|)')
 IRC_PING_RX     = re.compile(PREFIX + r'PING( +:| +|\n)(?P<payload>[^\n]+|)')
 IRC_PRIVMSG_RX  = re.compile(PREFIX + r'PRIVMSG( +|\n)(?P<nick>[^ ]+)( +:| +|\n)(?P<message>[^\n]+|)')
 IRC_USER_RX     = re.compile(PREFIX + r'USER( +|\n)(?P<username>[^ ]+) +[^ ]+ +[^ ]+( +:| +|\n)(?P<realname>[^\n]+|)')
-IRC_JOIN_RX     = re.compile(PREFIX + r'JOIN( +|\n)(?P<channel>[^ ]+)')
+IRC_JOIN_RX     = re.compile(PREFIX + r'JOIN( +|\n)(?P<channels>[^ ]+)')
 IRC_WHO_RX      = re.compile(PREFIX + r'WHO( +:| +|\n)(?P<target>[^\n]+|)')
 IRC_WHOIS_RX    = re.compile(PREFIX + r'WHOIS( +:| +|\n)(?P<nicks>[^\n]+|)')
 
@@ -153,10 +153,18 @@ class IRCHandler(object):
             user.registered = True
             await self.send_greeting(user)
 
-    async def handle_irc_join(self, user, channel):
-        self.logger.debug('Handling JOIN: %s', channel)
+    async def handle_irc_join(self, user, channels):
+        self.logger.debug('Handling JOIN: %s', channels)
 
-        await self.join_irc_channel(user, channel, True)
+        if channels == '0':
+            #part all
+            pass
+        else:
+            for channel in channels.split(','):
+                if channel.lower() in self.irc_channels.keys():
+                    await self.join_irc_channel(user, channel, True)
+                else:
+                    await reply_code(user, 'ERR_NOSUCHCHANNEL', (channel,))
 
     async def handle_irc_ping(self, user, payload):
         self.logger.debug('Handling PING: %s', payload)
@@ -267,35 +275,41 @@ class IRCHandler(object):
         await self.reply_code(user, 'RPL_ENDOFMOTD')
 
     async def join_irc_channel(self, user, channel, full_join=False):
+        entity_cache = [None]
         chan = channel.lower()
-        self.irc_channels[chan].add(user.irc_nick)
-        op = self.get_irc_op(self.tg.tg_username, channel)
-        if op == '@': self.irc_channels_ops[chan].add(user.irc_nick)
-        elif op == '~': self.irc_channels_founder[chan].add(user.irc_nick)
+        real_chan = self.get_realcaps_name(chan)
 
-        # Join Channel
-        await self.send_irc_command(user, ':{} JOIN :{}'.format(
-            user.get_irc_mask(), channel
-        ))
+        if full_join: self.irc_channels[chan].add(user.irc_nick)
+
+        # Notify IRC users in this channel
+        for usr in [self.users[x.lower()] for x in self.irc_channels[chan] if self.users[x.lower()].stream]:
+            await self.reply_command(usr, user, 'JOIN', (real_chan,))
 
         if not full_join:
             return
 
-        # Get all users from channel
-        tid = self.iid_to_tid[channel.lower()]
-        nicks = self.irc_channels[channel.lower()]
+        op = self.get_irc_op(self.tg.tg_username, channel)
+        if op == '@': self.irc_channels_ops[chan].add(user.irc_nick)
+        elif op == '~': self.irc_channels_founder[chan].add(user.irc_nick)
 
-        # Set channel topic
-        topic = (await self.tg.telegram_client.get_entity(tid)).title
-        await self.send_irc_command(user, ':{} TOPIC {} :{}'.format(
-            user.get_irc_mask(), channel, topic
-        ))
+        date = await self.tg.get_channel_creation(channel, entity_cache)
+        await self.reply_code(user, 'RPL_CREATIONTIME', (real_chan, date))
+        await self.irc_channel_topic(user, real_chan, entity_cache)
+        await self.irc_namelist(user, real_chan)
 
-        # Send NAMESLIST
+    async def irc_channel_topic(self, user, channel, entity_cache):
+        topic = await self.tg.get_channel_topic(channel, entity_cache)
+        timestamp = await self.tg.get_channel_creation(channel, entity_cache)
+        founder = list(self.irc_channels_founder[channel.lower()])[0]
+        await self.reply_code(user, 'RPL_TOPIC', (channel, topic))
+        await self.reply_code(user, 'RPL_TOPICWHOTIME', (channel, founder, timestamp))
+
+    async def irc_namelist(self, user, channel):
+        nicks = [self.get_irc_op(x, channel) + x for x in self.irc_channels[channel.lower()]]
+        status = '='
         for chunk in chunks(nicks, 25, ''):
-            await self.send_irc_command(user, ':{} 353 {} = {} :{}'.format(
-                self.hostname, user.irc_nick, channel, ' '.join(chunk)
-            ))
+            await self.reply_code(user, 'RPL_NAMREPLY', (status, channel, ' '.join(chunk)))
+        await self.reply_code(user, 'RPL_ENDOFNAMES', (channel,))
 
     async def part_irc_channel(self, user, channel):
         self.irc_channels[channel].remove(user.irc_nick)
@@ -311,6 +325,10 @@ class IRCHandler(object):
             if nick in self.irc_channels_founder[chan]:
                 return '~'
         return ''
+
+    def get_realcaps_name(self, name):
+        # name must be in lower
+        return self.tg.tid_to_iid[self.iid_to_tid[name]]
 
 class IRCUser(object):
     def __init__(self, stream, address, irc_nick=None, username=None, realname=None):

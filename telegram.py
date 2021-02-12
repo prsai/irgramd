@@ -2,6 +2,7 @@
 import logging
 import os
 import datetime
+import re
 import telethon
 from telethon import types as tgty
 
@@ -9,6 +10,10 @@ from telethon import types as tgty
 
 from include import CHAN_MAX_LENGHT, NICK_MAX_LENGTH
 from irc import IRCUser
+
+# Constants
+
+TL_TYPES_IDENT = re.compile(r"<class 'telethon.tl.types.([^']+)'>")
 
 # Configuration
 
@@ -29,6 +34,7 @@ class TelegramHandler(object):
         self.authorized = False
         self.id	= None
         self.tg_username = None
+        self.channels_date = {}
 
     async def initialize_telegram(self):
         # Setup media folder
@@ -188,14 +194,42 @@ class TelegramHandler(object):
             self.irc.users[irc_nick].bot = bot
         return bot
 
-    def get_tid(self, irc_nick, tid=None):
+    async def get_channel_topic(self, channel, entity_cache=[None]):
+        tid = self.get_tid(channel)
+        if entity_cache[0]:
+            entity = entity_cache[0]
+        else:
+            entity = await self.telegram_client.get_entity(tid)
+            entity_cache[0] = entity
+        entity_type = self.get_entity_type(entity)
+        return 'Telegram ' + entity_type + ' ' + str(tid) + ': ' + entity.title
+
+    async def get_channel_creation(self, channel, entity_cache=[None]):
+        tid = self.get_tid(channel)
+        if tid in self.channels_date.keys():
+            timestamp = self.channels_date[tid]
+        else:
+            if entity_cache[0]:
+                entity = entity_cache[0]
+            else:
+                entity = await self.telegram_client.get_entity(tid)
+                entity_cache[0] = entity
+            timestamp = entity.date.timestamp()
+            self.channels_date[tid] = timestamp
+        return int(timestamp)
+
+    def get_tid(self, irc_item, tid=None):
+        it = irc_item.lower()
         if tid:
             pass
-        elif irc_nick in self.irc.iid_to_tid:
-            tid = self.irc.iid_to_tid[irc_nick.lower()]
+        elif it in self.irc.iid_to_tid:
+            tid = self.irc.iid_to_tid[it]
         else:
             tid = self.id
         return tid
+
+    def get_entity_type(self, entity):
+        return TL_TYPES_IDENT.match(str(type(entity))).groups()[0]
 
     async def handle_telegram_message(self, event):
         self.logger.debug('Handling Telegram Message: %s', event)
