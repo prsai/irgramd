@@ -79,6 +79,8 @@ class IRCHandler(object):
                             await handler(user, **params)
                         else:
                             await self.reply_code(user, 'ERR_NEEDMOREPARAMS')
+                    else:
+                        await self.reply_code(user, 'ERR_NOTREGISTERED', ('',), '*')
 
             if not matched and user.registered:
                 await self.reply_code(user, 'ERR_UNKNOWNCOMMAND')
@@ -94,7 +96,7 @@ class IRCHandler(object):
             (IRC_JOIN_RX,     self.handle_irc_join,     True),
             (IRC_NICK_RX,     self.handle_irc_nick,     False),
             (IRC_PASS_RX,     self.handle_irc_pass,     False),
-            (IRC_PING_RX,     self.handle_irc_ping,     False),
+            (IRC_PING_RX,     self.handle_irc_ping,     True),
             (IRC_PRIVMSG_RX,  self.handle_irc_privmsg,  True),
             (IRC_USER_RX,     self.handle_irc_user,     False),
             (IRC_WHO_RX,      self.handle_irc_who,      True),

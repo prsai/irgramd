@@ -50,7 +50,7 @@ irc_codes = \
   'ERR_NOLOGIN': ('444', 'No login'),
   'ERR_SUMMONDISABLED': ('445', 'Summon disabled'),
   'ERR_USERSDISABLED': ('446', 'Users disabled'),
-  'ERR_NOTREGISTERED': ('451', 'Not registered'),
+  'ERR_NOTREGISTERED': ('451', ':Not registered'),
   'ERR_NEEDMOREPARAMS': ('461', 'Need more params'),
   'ERR_ALREADYREGISTRED': ('462', 'Already registered'),
   'ERR_NOPERMFORHOST': ('463', 'Insufficient permissions for host'),
