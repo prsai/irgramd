@@ -24,12 +24,12 @@ VALID_IRC_NICK_CHARS         = VALID_IRC_NICK_FIRST_CHARS + string.digits + '-'
 # IRC Regular Expressions
 
 PREFIX          = r'(:[^ ]+ +|)'
+IRC_JOIN_RX     = re.compile(PREFIX + r'JOIN( +|\n)(?P<channels>[^ ]+)')
 IRC_NICK_RX     = re.compile(PREFIX + r'NICK( +:| +|\n)(?P<nick>[^\n]+|)')
 IRC_PASS_RX     = re.compile(PREFIX + r'PASS( +:| +|\n)(?P<password>[^\n]+|)')
 IRC_PING_RX     = re.compile(PREFIX + r'PING( +:| +|\n)(?P<payload>[^\n]+|)')
 IRC_PRIVMSG_RX  = re.compile(PREFIX + r'PRIVMSG( +|\n)(?P<nick>[^ ]+)( +:| +|\n)(?P<message>[^\n]+|)')
 IRC_USER_RX     = re.compile(PREFIX + r'USER( +|\n)(?P<username>[^ ]+) +[^ ]+ +[^ ]+( +:| +|\n)(?P<realname>[^\n]+|)')
-IRC_JOIN_RX     = re.compile(PREFIX + r'JOIN( +|\n)(?P<channels>[^ ]+)')
 IRC_WHO_RX      = re.compile(PREFIX + r'WHO( +:| +|\n)(?P<target>[^\n]+|)')
 IRC_WHOIS_RX    = re.compile(PREFIX + r'WHOIS( +:| +|\n)(?P<nicks>[^\n]+|)')
 
@@ -91,12 +91,12 @@ class IRCHandler(object):
     def initialize_irc(self):
         self.irc_handlers = (
             # pattern              handle           register_required
+            (IRC_JOIN_RX,     self.handle_irc_join,     True),
             (IRC_NICK_RX,     self.handle_irc_nick,     False),
             (IRC_PASS_RX,     self.handle_irc_pass,     False),
             (IRC_PING_RX,     self.handle_irc_ping,     False),
             (IRC_PRIVMSG_RX,  self.handle_irc_privmsg,  True),
             (IRC_USER_RX,     self.handle_irc_user,     False),
-            (IRC_JOIN_RX,     self.handle_irc_join,     True),
             (IRC_WHO_RX,      self.handle_irc_who,      True),
             (IRC_WHOIS_RX,    self.handle_irc_whois,    True),
         )
