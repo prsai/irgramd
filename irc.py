@@ -177,7 +177,7 @@ class IRCHandler(object):
         tgt = target.lower()
         if tgt in self.irc_channels.keys():
             users = self.irc_channels[tgt]
-            chan = target
+            chan = self.get_realcaps_name(tgt)
         elif tgt in self.users.keys():
             users = (self.users[tgt],)
             chan = '*'
