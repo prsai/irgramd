@@ -165,7 +165,7 @@ class IRCHandler(object):
                 if channel.lower() in self.irc_channels.keys():
                     await self.join_irc_channel(user, channel, True)
                 else:
-                    await reply_code(user, 'ERR_NOSUCHCHANNEL', (channel,))
+                    await self.reply_code(user, 'ERR_NOSUCHCHANNEL', (channel,))
 
     async def handle_irc_ping(self, user, payload):
         self.logger.debug('Handling PING: %s', payload)
