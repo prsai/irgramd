@@ -25,6 +25,7 @@ VALID_IRC_NICK_CHARS         = VALID_IRC_NICK_FIRST_CHARS + string.digits + '-'
 
 PREFIX          = r'(:[^ ]+ +|)'
 IRC_JOIN_RX     = re.compile(PREFIX + r'JOIN( +|\n)(?P<channels>[^ ]+)')
+IRC_NAMES_RX    = re.compile(PREFIX + r'NAMES( +|\n)(?P<channels>[^ ]+)')
 IRC_NICK_RX     = re.compile(PREFIX + r'NICK( +:| +|\n)(?P<nick>[^\n]+|)')
 IRC_PASS_RX     = re.compile(PREFIX + r'PASS( +:| +|\n)(?P<password>[^\n]+|)')
 IRC_PING_RX     = re.compile(PREFIX + r'PING( +:| +|\n)(?P<payload>[^\n]+|)')
@@ -93,6 +94,7 @@ class IRCHandler(object):
         self.irc_handlers = (
             # pattern              handle           register_required
             (IRC_JOIN_RX,     self.handle_irc_join,     True),
+            (IRC_NAMES_RX,    self.handle_irc_names,    True),
             (IRC_NICK_RX,     self.handle_irc_nick,     False),
             (IRC_PASS_RX,     self.handle_irc_pass,     False),
             (IRC_PING_RX,     self.handle_irc_ping,     True),
@@ -166,6 +168,12 @@ class IRCHandler(object):
                     await self.join_irc_channel(user, channel, True)
                 else:
                     await self.reply_code(user, 'ERR_NOSUCHCHANNEL', (channel,))
+
+    async def handle_irc_names(self, user, channels):
+        self.logger.debug('Handling NAMES: %s', channels)
+
+        for channel in channels.split(','):
+            await self.irc_namelist(user, channel)
 
     async def handle_irc_ping(self, user, payload):
         self.logger.debug('Handling PING: %s', payload)
