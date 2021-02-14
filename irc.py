@@ -63,12 +63,10 @@ class IRCHandler(object):
                 break
             message = message.decode()
             self.logger.debug(message)
-            matched = False
 
             for pattern, handler, register_required in self.irc_handlers:
                 matches = pattern.match(message)
                 if matches:
-                    matched = True
                     if user.registered or not register_required:
                         params = matches.groupdict()
                         # Remove possible extra characters in parameters
@@ -81,8 +79,9 @@ class IRCHandler(object):
                             await self.reply_code(user, 'ERR_NEEDMOREPARAMS')
                     else:
                         await self.reply_code(user, 'ERR_NOTREGISTERED', ('',), '*')
+                    break
 
-            if not matched and user.registered:
+            if not matches and user.registered:
                 await self.reply_code(user, 'ERR_UNKNOWNCOMMAND')
 
     def set_telegram(self, tg):
