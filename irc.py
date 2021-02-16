@@ -367,9 +367,9 @@ class IRCUser(object):
         if len(nick) <= NICK_MAX_LENGTH and nick[0] in VALID_IRC_NICK_FIRST_CHARS:
             for x in nick[1:]:
                 if x not in VALID_IRC_NICK_CHARS:
-                    return 0
-            return 1
-        else: return 0
+                    return False
+            return True
+        else: return False
 
     def del_from_channels(self, irc, channels=None):
         for chan in channels if channels else irc.irc_channels.keys():
