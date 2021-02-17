@@ -24,8 +24,8 @@ VALID_IRC_NICK_CHARS         = VALID_IRC_NICK_FIRST_CHARS + string.digits + '-'
 # IRC Regular Expressions
 
 PREFIX          = r'(:[^ ]+ +|)'
-IRC_JOIN_RX     = re.compile(PREFIX + r'JOIN( +|\n)(?P<channels>[^ ]+)')
-IRC_NAMES_RX    = re.compile(PREFIX + r'NAMES( +|\n)(?P<channels>[^ ]+)')
+IRC_JOIN_RX     = re.compile(PREFIX + r'JOIN( +:| +|\n)(?P<channels>[^\n]+|)')
+IRC_NAMES_RX    = re.compile(PREFIX + r'NAMES( +:| +|\n)(?P<channels>[^\n]+|)')
 IRC_NICK_RX     = re.compile(PREFIX + r'NICK( +:| +|\n)(?P<nick>[^\n]+|)')
 IRC_PASS_RX     = re.compile(PREFIX + r'PASS( +:| +|\n)(?P<password>[^\n]+|)')
 IRC_PING_RX     = re.compile(PREFIX + r'PING( +:| +|\n)(?P<payload>[^\n]+|)')
