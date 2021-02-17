@@ -23,7 +23,7 @@ VALID_IRC_NICK_CHARS         = VALID_IRC_NICK_FIRST_CHARS + string.digits + '-'
 
 # IRC Regular Expressions
 
-PREFIX          = r'(:[^ ]+ +|)'
+PREFIX          = r'(?ai)(:[^ ]+ +|)'
 IRC_JOIN_RX     = re.compile(PREFIX + r'JOIN( +:| +|\n)(?P<channels>[^\n]+|)')
 IRC_NAMES_RX    = re.compile(PREFIX + r'NAMES( +:| +|\n)(?P<channels>[^\n]+|)')
 IRC_NICK_RX     = re.compile(PREFIX + r'NICK( +:| +|\n)(?P<nick>[^\n]+|)')
@@ -62,7 +62,7 @@ class IRCHandler(object):
                     user.del_from_channels(self)
                 del user
                 break
-            message = message.decode()
+            message = message.decode().replace('\r','\n')
             self.logger.debug(message)
 
             for pattern, handler, register_required in self.irc_handlers:
