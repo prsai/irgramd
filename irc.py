@@ -31,6 +31,7 @@ IRC_NICK_RX     = re.compile(PREFIX + r'NICK( +:| +|\n)(?P<nick>[^\n ]+|)')
 IRC_PASS_RX     = re.compile(PREFIX + r'PASS( +:| +|\n)(?P<password>[^\n ]+|)')
 IRC_PING_RX     = re.compile(PREFIX + r'PING( +:| +|\n)(?P<payload>[^\n]+|)')
 IRC_PRIVMSG_RX  = re.compile(PREFIX + r'PRIVMSG( +|\n)(?P<nick>[^ ]+)( +:| +|\n)(?P<message>[^\n]+|)')
+IRC_TOPIC_RX    = re.compile(PREFIX + r'TOPIC( +:| +|\n)(?P<channel>[^\n ]+|)')
 IRC_USER_RX     = re.compile(PREFIX + r'USER( +|\n)(?P<username>[^ ]+) +[^ ]+ +[^ ]+( +:| +|\n)(?P<realname>[^\n]+|)')
 IRC_WHO_RX      = re.compile(PREFIX + r'WHO( +:| +|\n)(?P<target>[^\n ]+|)')
 IRC_WHOIS_RX    = re.compile(PREFIX + r'WHOIS( +:| +|\n)(?P<nicks>[^\n ]+|)')
@@ -101,6 +102,7 @@ class IRCHandler(object):
             (IRC_PASS_RX,     self.handle_irc_pass,     False,              True),
             (IRC_PING_RX,     self.handle_irc_ping,     True,               True),
             (IRC_PRIVMSG_RX,  self.handle_irc_privmsg,  True,               True),
+            (IRC_TOPIC_RX,    self.handle_irc_topic,    True,               True),
             (IRC_USER_RX,     self.handle_irc_user,     False,              True),
             (IRC_WHO_RX,      self.handle_irc_who,      True,               True),
             (IRC_WHOIS_RX,    self.handle_irc_whois,    True,               True),
@@ -184,6 +186,13 @@ class IRCHandler(object):
             await self.send_motd(user)
         else:
             await self.reply_code(user, 'ERR_NOSUCHSERVER', (target,))
+
+    async def handle_irc_topic(self, user, channel):
+        self.logger.debug('Handling TOPIC: %s', channel)
+
+        chan = channel.lower()
+        real_chan = self.get_realcaps_name(chan)
+        await self.irc_channel_topic(user, real_chan)
 
     async def handle_irc_ping(self, user, payload):
         self.logger.debug('Handling PING: %s', payload)
@@ -316,10 +325,11 @@ class IRCHandler(object):
         await self.irc_channel_topic(user, real_chan, entity_cache)
         await self.irc_namelist(user, real_chan)
 
-    async def irc_channel_topic(self, user, channel, entity_cache):
-        topic = await self.tg.get_channel_topic(channel, entity_cache)
-        timestamp = await self.tg.get_channel_creation(channel, entity_cache)
-        founder = list(self.irc_channels_founder[channel.lower()])[0]
+    async def irc_channel_topic(self, user, channel, entity_cache=[None]):
+        chan = channel.lower()
+        topic = await self.tg.get_channel_topic(chan, entity_cache)
+        timestamp = await self.tg.get_channel_creation(chan, entity_cache)
+        founder = list(self.irc_channels_founder[chan])[0]
         await self.reply_code(user, 'RPL_TOPIC', (channel, topic))
         await self.reply_code(user, 'RPL_TOPICWHOTIME', (channel, founder, timestamp))
 
