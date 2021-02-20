@@ -31,6 +31,7 @@ IRC_NICK_RX     = re.compile(PREFIX + r'NICK( +:| +|\n)(?P<nick>[^\n ]+|)')
 IRC_PASS_RX     = re.compile(PREFIX + r'PASS( +:| +|\n)(?P<password>[^\n ]+|)')
 IRC_PING_RX     = re.compile(PREFIX + r'PING( +:| +|\n)(?P<payload>[^\n]+|)')
 IRC_PRIVMSG_RX  = re.compile(PREFIX + r'PRIVMSG( +|\n)(?P<nick>[^ ]+)( +:| +|\n)(?P<message>[^\n]+|)')
+IRC_QUIT_RX     = re.compile(PREFIX + r'QUIT( +:| +|\n)(?P<reason>[^\n]+|)')
 IRC_TOPIC_RX    = re.compile(PREFIX + r'TOPIC( +:| +|\n)(?P<channel>[^\n ]+|)')
 IRC_USER_RX     = re.compile(PREFIX + r'USER( +|\n)(?P<username>[^ ]+) +[^ ]+ +[^ ]+( +:| +|\n)(?P<realname>[^\n]+|)')
 IRC_WHO_RX      = re.compile(PREFIX + r'WHO( +:| +|\n)(?P<target>[^\n ]+|)')
@@ -59,6 +60,9 @@ class IRCHandler(object):
             try:
                 message = await user.stream.read_until(b'\n')
             except tornado.iostream.StreamClosedError:
+                user.stream = None
+                reason = user.close_reason if user.close_reason else ':Client disconnect'
+                await self.send_users_irc(user, 'QUIT', (reason,))
                 if user in self.users.values():
                     del self.users[user.irc_nick.lower()]
                     user.del_from_channels(self)
@@ -102,6 +106,7 @@ class IRCHandler(object):
             (IRC_PASS_RX,     self.handle_irc_pass,     False,              True),
             (IRC_PING_RX,     self.handle_irc_ping,     True,               True),
             (IRC_PRIVMSG_RX,  self.handle_irc_privmsg,  True,               True),
+            (IRC_QUIT_RX,     self.handle_irc_quit,     False,              False),
             (IRC_TOPIC_RX,    self.handle_irc_topic,    True,               True),
             (IRC_USER_RX,     self.handle_irc_user,     False,              True),
             (IRC_WHO_RX,      self.handle_irc_who,      True,               True),
@@ -140,8 +145,7 @@ class IRCHandler(object):
         elif user.password == user.recv_pass:
             if user.registered:
                 # rename
-                for usr in [x for x in self.users.values() if x.stream]:
-                    await self.reply_command(usr, user, 'NICK', (nick,))
+                await self.send_users_irc(user, 'NICK', (nick,))
                 del self.users[user.irc_nick.lower()]
             user.irc_nick = nick
             self.users[ni] = user
@@ -259,6 +263,13 @@ class IRCHandler(object):
         telegram_id = self.iid_to_tid[tgt]
         await self.tg.telegram_client.send_message(telegram_id, message)
 
+    async def handle_irc_quit(self, user, reason):
+        self.logger.debug('Handling TOPIC: %s', reason)
+
+        await self.reply_command(user, SRV, 'ERROR', (':Client disconnect',))
+        user.close_reason = ':' + reason
+        user.stream.close()
+
     # IRC functions
 
     async def reply_command(self, user, prfx, comm, params):
@@ -301,6 +312,10 @@ class IRCHandler(object):
         await self.reply_code(user, 'RPL_MOTD', ('git repository: https://github.com/prsai/irgramd',))
         await self.reply_code(user, 'RPL_MOTD', ('darcs repository: https://src.presi.org/darcs/irgramd',))
         await self.reply_code(user, 'RPL_ENDOFMOTD')
+
+    async def send_users_irc(self, prfx, command, params):
+        for usr in [x for x in self.users.values() if x.stream]:
+            await self.reply_command(usr, prfx, command, params)
 
     async def join_irc_channel(self, user, channel, full_join=False):
         entity_cache = [None]
@@ -372,6 +387,7 @@ class IRCUser(object):
         self.oper = False
         self.tls = False
         self.bot = None
+        self.close_reason = ''
 
     def get_irc_mask(self):
         return '{}!{}@{}'.format(self.irc_nick, self.irc_username, self.address)
