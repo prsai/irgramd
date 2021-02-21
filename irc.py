@@ -34,6 +34,7 @@ IRC_PRIVMSG_RX  = re.compile(PREFIX + r'PRIVMSG( +|\n)(?P<nick>[^ ]+)( +:| +|\n)
 IRC_QUIT_RX     = re.compile(PREFIX + r'QUIT( +:| +|\n)(?P<reason>[^\n]+|)')
 IRC_TOPIC_RX    = re.compile(PREFIX + r'TOPIC( +:| +|\n)(?P<channel>[^\n ]+|)')
 IRC_USER_RX     = re.compile(PREFIX + r'USER( +|\n)(?P<username>[^ ]+) +[^ ]+ +[^ ]+( +:| +|\n)(?P<realname>[^\n]+|)')
+IRC_VERSION_RX  = re.compile(PREFIX + r'VERSION( +:| +|\n)(?P<target>[^\n ]+|)')
 IRC_WHO_RX      = re.compile(PREFIX + r'WHO( +:| +|\n)(?P<target>[^\n ]+|)')
 IRC_WHOIS_RX    = re.compile(PREFIX + r'WHOIS( +:| +|\n)(?P<nicks>[^\n ]+|)')
 
@@ -109,6 +110,7 @@ class IRCHandler(object):
             (IRC_QUIT_RX,     self.handle_irc_quit,     False,              False),
             (IRC_TOPIC_RX,    self.handle_irc_topic,    True,               True),
             (IRC_USER_RX,     self.handle_irc_user,     False,              True),
+            (IRC_VERSION_RX,  self.handle_irc_version,  True,               False),
             (IRC_WHO_RX,      self.handle_irc_who,      True,               True),
             (IRC_WHOIS_RX,    self.handle_irc_whois,    True,               True),
         )
@@ -256,6 +258,16 @@ class IRCHandler(object):
             else:
                 await self.reply_code(user, 'ERR_NOSUCHNICK', (nick,))
 
+    async def handle_irc_version(self, user, target):
+        self.logger.debug('Handling VERSION: %s', target)
+
+        tgt = target.lower()
+        if not tgt or tgt == self.hostname or tgt in self.users.keys():
+            await self.reply_code(user, 'RPL_VERSION', (VERSION, self.hostname))
+            await self.send_isupport(user)
+        else:
+            await self.reply_code(user, 'ERR_NOSUCHSERVER', (target,))
+
     async def handle_irc_privmsg(self, user, nick, message):
         self.logger.debug('Handling PRIVMSG: %s, %s', nick, message)
 
@@ -301,7 +313,7 @@ class IRCHandler(object):
         await self.reply_code(user, 'RPL_YOURHOST', (self.hostname, VERSION))
         await self.reply_code(user, 'RPL_CREATED', (self.start_time,))
         await self.reply_code(user, 'RPL_MYINFO', (self.hostname, VERSION))
-        await self.reply_code(user, 'RPL_ISUPPORT', (str(CHAN_MAX_LENGHT), str(NICK_MAX_LENGTH)))
+        await self.send_isupport(user)
         await self.send_motd(user)
 
     async def send_motd(self, user):
@@ -317,6 +329,9 @@ class IRCHandler(object):
         await self.reply_code(user, 'RPL_MOTD', ('git repository: https://github.com/prsai/irgramd',))
         await self.reply_code(user, 'RPL_MOTD', ('darcs repository: https://src.presi.org/darcs/irgramd',))
         await self.reply_code(user, 'RPL_ENDOFMOTD')
+
+    async def send_isupport(self, user):
+        await self.reply_code(user, 'RPL_ISUPPORT', (CHAN_MAX_LENGHT, NICK_MAX_LENGTH))
 
     async def send_users_irc(self, prfx, command, params):
         for usr in [x for x in self.users.values() if x.stream]:

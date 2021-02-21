@@ -18,6 +18,7 @@ irc_codes = \
   'RPL_TOPIC': ('332', '{} :{}'),
   'RPL_TOPICWHOTIME': ('333', '{} {} {}'),
   'RPL_WHOISBOT': ('335', '{} :is a Telegram bot'),
+  'RPL_VERSION': ('351', 'irgramd-{} {} :IRC to Telegram gateway'),
   'RPL_WHOREPLY': ('352', '{} {} {} {} {} H{} :0 {}'),
   'RPL_NAMREPLY': ('353', '{} {} :{}'),
   'RPL_ENDOFNAMES': ('366', '{} :End of NAME reply'),
