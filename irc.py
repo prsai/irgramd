@@ -230,7 +230,7 @@ class IRCHandler(object):
         await self.reply_code(user, 'RPL_ENDOFWHO', (chan,))
 
     async def handle_irc_whois(self, user, nicks):
-        self.logger.debug('Handling WHO: %s', nicks)
+        self.logger.debug('Handling WHOIS: %s', nicks)
         for nick in nicks.split(','):
             ni = nick.lower()
             real_ni = self.users[ni].irc_nick
