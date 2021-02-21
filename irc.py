@@ -13,7 +13,7 @@ import tornado.ioloop
 
 from include import VERSION, CHAN_MAX_LENGHT, NICK_MAX_LENGTH
 from irc_replies import irc_codes
-from utils import chunks
+from utils import chunks, set_replace
 
 # Constants
 
@@ -145,8 +145,13 @@ class IRCHandler(object):
         elif user.password == user.recv_pass:
             if user.registered:
                 # rename
+                current = user.irc_nick.lower()
                 await self.send_users_irc(user, 'NICK', (nick,))
-                del self.users[user.irc_nick.lower()]
+                del self.users[current]
+                for ch in self.irc_channels.keys():
+                    set_replace(self.irc_channels[ch], current, ni)
+                    set_replace(self.irc_channels_ops[ch], current, ni)
+                    set_replace(self.irc_channels_founder[ch], current, ni)
             user.irc_nick = nick
             self.users[ni] = user
             if not user.registered and user.irc_username:
