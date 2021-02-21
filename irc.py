@@ -375,7 +375,7 @@ class IRCHandler(object):
         return self.tg.tid_to_iid[self.iid_to_tid[name]]
 
 class IRCUser(object):
-    def __init__(self, stream, address, irc_nick=None, username=None, realname=None):
+    def __init__(self, stream, address, irc_nick=None, username='', realname=None):
         self.stream  = stream
         self.address = address[0]
         self.irc_nick = irc_nick
