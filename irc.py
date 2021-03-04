@@ -18,6 +18,7 @@ from utils import chunks, set_replace
 # Constants
 
 SRV = None
+ALL_PARAMS = 16
 VALID_IRC_NICK_FIRST_CHARS   = string.ascii_letters + '[]\`_^{|}'
 VALID_IRC_NICK_CHARS         = VALID_IRC_NICK_FIRST_CHARS + string.digits + '-'
 
@@ -25,6 +26,7 @@ VALID_IRC_NICK_CHARS         = VALID_IRC_NICK_FIRST_CHARS + string.digits + '-'
 
 PREFIX          = r'(?ai)(:[^ ]+ +|)'
 IRC_JOIN_RX     = re.compile(PREFIX + r'JOIN( +:| +|\n)(?P<channels>[^\n ]+|)')
+IRC_MODE_RX     = re.compile(PREFIX + r'MODE( +|\n)(?P<target>[^ ]+( +|\n)|)(?P<mode>[^ ]+( +|\n)|)(?P<arguments>[^\n]+|)')
 IRC_MOTD_RX     = re.compile(PREFIX + r'MOTD( +:| +|\n)(?P<target>[^\n ]+|)')
 IRC_NAMES_RX    = re.compile(PREFIX + r'NAMES( +:| +|\n)(?P<channels>[^\n ]+|)')
 IRC_NICK_RX     = re.compile(PREFIX + r'NICK( +:| +|\n)(?P<nick>[^\n ]+|)')
@@ -72,7 +74,7 @@ class IRCHandler(object):
             message = message.decode().replace('\r','\n')
             self.logger.debug(message)
 
-            for pattern, handler, register_required, params_required in self.irc_handlers:
+            for pattern, handler, register_required, num_params_required in self.irc_handlers:
                 matches = pattern.match(message)
                 if matches:
                     if user.registered or not register_required:
@@ -81,7 +83,8 @@ class IRCHandler(object):
                         params = {x:y.strip() for x,y in params.items()}
                         num_params = len([x for x in params.values() if x])
                         num_params_expected = len(params.keys())
-                        if num_params >= num_params_expected or not params_required:
+                        if num_params >= self.num_params_necessary(num_params_required,
+                                                                   num_params_expected):
                             await handler(user, **params)
                         else:
                             await self.reply_code(user, 'ERR_NEEDMOREPARAMS')
@@ -99,20 +102,21 @@ class IRCHandler(object):
 
     def initialize_irc(self):
         self.irc_handlers = (
-            # pattern              handle           register_required   params_required
-            (IRC_JOIN_RX,     self.handle_irc_join,     True,               True),
-            (IRC_MOTD_RX,     self.handle_irc_motd,     True,               False),
-            (IRC_NAMES_RX,    self.handle_irc_names,    True,               True),
-            (IRC_NICK_RX,     self.handle_irc_nick,     False,              True),
-            (IRC_PASS_RX,     self.handle_irc_pass,     False,              True),
-            (IRC_PING_RX,     self.handle_irc_ping,     True,               True),
-            (IRC_PRIVMSG_RX,  self.handle_irc_privmsg,  True,               True),
-            (IRC_QUIT_RX,     self.handle_irc_quit,     False,              False),
-            (IRC_TOPIC_RX,    self.handle_irc_topic,    True,               True),
-            (IRC_USER_RX,     self.handle_irc_user,     False,              True),
-            (IRC_VERSION_RX,  self.handle_irc_version,  True,               False),
-            (IRC_WHO_RX,      self.handle_irc_who,      True,               True),
-            (IRC_WHOIS_RX,    self.handle_irc_whois,    True,               True),
+            # pattern              handle           register_required   num_params_required
+            (IRC_JOIN_RX,     self.handle_irc_join,     True,             ALL_PARAMS),
+            (IRC_MODE_RX,     self.handle_irc_mode,     True,             1),
+            (IRC_MOTD_RX,     self.handle_irc_motd,     True,             0),
+            (IRC_NAMES_RX,    self.handle_irc_names,    True,             ALL_PARAMS),
+            (IRC_NICK_RX,     self.handle_irc_nick,     False,            ALL_PARAMS),
+            (IRC_PASS_RX,     self.handle_irc_pass,     False,            ALL_PARAMS),
+            (IRC_PING_RX,     self.handle_irc_ping,     True,             ALL_PARAMS),
+            (IRC_PRIVMSG_RX,  self.handle_irc_privmsg,  True,             ALL_PARAMS),
+            (IRC_QUIT_RX,     self.handle_irc_quit,     False,            0),
+            (IRC_TOPIC_RX,    self.handle_irc_topic,    True,             ALL_PARAMS),
+            (IRC_USER_RX,     self.handle_irc_user,     False,            ALL_PARAMS),
+            (IRC_VERSION_RX,  self.handle_irc_version,  True,             0),
+            (IRC_WHO_RX,      self.handle_irc_who,      True,             ALL_PARAMS),
+            (IRC_WHOIS_RX,    self.handle_irc_whois,    True,             ALL_PARAMS),
         )
         self.iid_to_tid   = {}
         self.irc_channels = collections.defaultdict(set)
@@ -189,6 +193,24 @@ class IRCHandler(object):
 
         for channel in channels.split(','):
             await self.irc_namelist(user, channel)
+
+    async def handle_irc_mode(self, user, target, mode, arguments):
+        self.logger.debug('Handling MODE: %s, %s, %s', target, mode, arguments)
+
+        if not mode:
+            tgt = target.lower()
+            if tgt in self.users.keys():
+                if tgt == user.irc_nick:
+                    await self.mode_user(user, user, False)
+                else:
+                    await self.reply_code(user, 'ERR_USERSDONTMATCH')
+            elif tgt[0] == '#':
+                if tgt in self.irc_channels.keys():
+                    await self.mode_channel(user, target, False)
+                else:
+                    await self.reply_code(user, 'ERR_NOSUCHCHANNEL', (target,))
+            else:
+                await self.reply_code(user, 'ERR_NOSUCHNICK', (target,))
 
     async def handle_irc_motd(self, user, target):
         self.logger.debug('Handling MOTD: %s', target)
@@ -315,6 +337,7 @@ class IRCHandler(object):
         await self.reply_code(user, 'RPL_MYINFO', (self.hostname, VERSION))
         await self.send_isupport(user)
         await self.send_motd(user)
+        await self.mode_user(user, user, True)
 
     async def send_motd(self, user):
         await self.reply_code(user, 'RPL_MOTDSTART', (self.hostname,))
@@ -336,6 +359,23 @@ class IRCHandler(object):
     async def send_users_irc(self, prfx, command, params):
         for usr in [x for x in self.users.values() if x.stream]:
             await self.reply_command(usr, prfx, command, params)
+
+    async def mode_user(self, user, usr, com):
+        modes = ''
+        if usr.oper: modes += 'o'
+        if usr.tls: modes += 'S'
+        if modes: modes = '+' + modes
+        if com:
+            await self.reply_command(user, usr, 'MODE', (usr.irc_nick, modes))
+        else:
+            await self.reply_code(user, 'RPL_UMODEIS', (modes,))
+
+    async def mode_channel(self, user, channel, com):
+        modes = '+nt'
+        if com:
+            await self.reply_command(user, user, 'MODE', (channel, modes))
+        else:
+            await self.reply_code(user, 'RPL_CHANNELMODEIS', (channel, modes,''))
 
     async def join_irc_channel(self, user, channel, full_join=False):
         entity_cache = [None]
@@ -393,6 +433,13 @@ class IRCHandler(object):
     def get_realcaps_name(self, name):
         # name must be in lower
         return self.tg.tid_to_iid[self.iid_to_tid[name]]
+
+    def num_params_necessary(self, num_params_required, num_params_expected):
+        if num_params_required == ALL_PARAMS:
+            npn = num_params_expected
+        else:
+            npn = num_params_required
+        return npn
 
 class IRCUser(object):
     def __init__(self, stream, address, irc_nick=None, username='', realname=None):
