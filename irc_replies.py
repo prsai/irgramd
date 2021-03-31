@@ -48,7 +48,7 @@ irc_codes = \
   'ERR_NICKNAMEINUSE': ('433', '{} :Nickname in use'),
   'ERR_NICKCOLLISION': ('436', 'Nickname collision'),
   'ERR_USERNOTINCHANNEL': ('441', 'User not in channel'),
-  'ERR_NOTONCHANNEL': ('442', 'Not on channel'),
+  'ERR_NOTONCHANNEL': ('442', '{} :Not on channel'),
   'ERR_USERONCHANNEL': ('443', 'User on channel'),
   'ERR_NOLOGIN': ('444', 'No login'),
   'ERR_SUMMONDISABLED': ('445', 'Summon disabled'),

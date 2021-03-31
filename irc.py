@@ -30,6 +30,7 @@ IRC_MODE_RX     = re.compile(PREFIX + r'MODE( +|\n)(?P<target>[^ ]+( +|\n)|)(?P<
 IRC_MOTD_RX     = re.compile(PREFIX + r'MOTD( +:| +|\n)(?P<target>[^\n ]+|)')
 IRC_NAMES_RX    = re.compile(PREFIX + r'NAMES( +:| +|\n)(?P<channels>[^\n ]+|)')
 IRC_NICK_RX     = re.compile(PREFIX + r'NICK( +:| +|\n)(?P<nick>[^\n ]+|)')
+IRC_PART_RX     = re.compile(PREFIX + r'PART( +|\n)(?P<channels>[^ ]+|)( +:| +|\n|)(?P<reason>[^\n]+|)')
 IRC_PASS_RX     = re.compile(PREFIX + r'PASS( +:| +|\n)(?P<password>[^\n ]+|)')
 IRC_PING_RX     = re.compile(PREFIX + r'PING( +:| +|\n)(?P<payload>[^\n]+|)')
 IRC_PRIVMSG_RX  = re.compile(PREFIX + r'PRIVMSG( +|\n)(?P<nick>[^ ]+)( +:| +|\n)(?P<message>[^\n]+|)')
@@ -108,6 +109,7 @@ class IRCHandler(object):
             (IRC_MOTD_RX,     self.handle_irc_motd,     True,             0),
             (IRC_NAMES_RX,    self.handle_irc_names,    True,             ALL_PARAMS),
             (IRC_NICK_RX,     self.handle_irc_nick,     False,            ALL_PARAMS),
+            (IRC_PART_RX,     self.handle_irc_part,     True,             1),
             (IRC_PASS_RX,     self.handle_irc_pass,     False,            ALL_PARAMS),
             (IRC_PING_RX,     self.handle_irc_ping,     True,             ALL_PARAMS),
             (IRC_PRIVMSG_RX,  self.handle_irc_privmsg,  True,             ALL_PARAMS),
@@ -179,14 +181,28 @@ class IRCHandler(object):
         self.logger.debug('Handling JOIN: %s', channels)
 
         if channels == '0':
-            #part all
-            pass
+            for channel in self.irc_channels.keys():
+                if user.irc_nick in self.irc_channels[channel]:
+                    await self.part_irc_channel(user, channel, '')
         else:
             for channel in channels.split(','):
                 if channel.lower() in self.irc_channels.keys():
                     await self.join_irc_channel(user, channel, True)
                 else:
                     await self.reply_code(user, 'ERR_NOSUCHCHANNEL', (channel,))
+
+    async def handle_irc_part(self, user, channels, reason):
+        self.logger.debug('Handling PART: %s, %s', channels, reason)
+
+        for channel in channels.split(','):
+            chan = channel.lower()
+            if chan in self.irc_channels.keys():
+                if user.irc_nick in self.irc_channels[chan]:
+                    await self.part_irc_channel(user, channel, reason)
+                else:
+                    await self.reply_code(user, 'ERR_NOTONCHANNEL', (channel,))
+            else:
+                await self.reply_code(user, 'ERR_NOSUCHCHANNEL', (channel,))
 
     async def handle_irc_names(self, user, channels):
         self.logger.debug('Handling NAMES: %s', channels)
@@ -400,6 +416,18 @@ class IRCHandler(object):
         await self.irc_channel_topic(user, real_chan, entity_cache)
         await self.irc_namelist(user, real_chan)
 
+    async def part_irc_channel(self, user, channel, reason):
+        chan = channel.lower()
+        real_chan = self.get_realcaps_name(chan)
+
+        # Notify IRC users in this channel
+        for usr in [self.users[x.lower()] for x in self.irc_channels[chan] if self.users[x.lower()].stream]:
+            await self.reply_command(usr, user, 'PART', (real_chan, reason))
+
+        self.irc_channels[chan].remove(user.irc_nick)
+        self.irc_channels_ops[chan].discard(user.irc_nick)
+        self.irc_channels_founder[chan].discard(user.irc_nick)
+
     async def irc_channel_topic(self, user, channel, entity_cache=[None]):
         chan = channel.lower()
         topic = await self.tg.get_channel_topic(chan, entity_cache)
@@ -414,12 +442,6 @@ class IRCHandler(object):
         for chunk in chunks(nicks, 25, ''):
             await self.reply_code(user, 'RPL_NAMREPLY', (status, channel, ' '.join(chunk)))
         await self.reply_code(user, 'RPL_ENDOFNAMES', (channel,))
-
-    async def part_irc_channel(self, user, channel):
-        self.irc_channels[channel].remove(user.irc_nick)
-        await self.send_irc_command(user, ':{} PART {} :'.format(
-            user.get_irc_mask(), channel
-        ))
 
     def get_irc_op(self, nick, channel):
         chan = channel.lower()
