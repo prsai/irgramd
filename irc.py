@@ -37,6 +37,7 @@ IRC_PRIVMSG_RX  = re.compile(PREFIX + r'PRIVMSG( +|\n)(?P<nick>[^ ]+)( +:| +|\n)
 IRC_QUIT_RX     = re.compile(PREFIX + r'QUIT( +:| +|\n)(?P<reason>[^\n]+|)')
 IRC_TOPIC_RX    = re.compile(PREFIX + r'TOPIC( +:| +|\n)(?P<channel>[^\n ]+|)')
 IRC_USER_RX     = re.compile(PREFIX + r'USER( +|\n)(?P<username>[^ ]+) +[^ ]+ +[^ ]+( +:| +|\n)(?P<realname>[^\n]+|)')
+IRC_USERHOST_RX = re.compile(PREFIX + r'USERHOST( +|\n)(?P<nick1>[^ ]+( +|\n)|)(?P<nick2>[^ ]+( +|\n)|)(?P<nick3>[^ ]+( +|\n)|)(?P<nick4>[^ ]+( +|\n)|)(?P<nick5>[^\n]+|)')
 IRC_VERSION_RX  = re.compile(PREFIX + r'VERSION( +:| +|\n)(?P<target>[^\n ]+|)')
 IRC_WHO_RX      = re.compile(PREFIX + r'WHO( +:| +|\n)(?P<target>[^\n ]+|)')
 IRC_WHOIS_RX    = re.compile(PREFIX + r'WHOIS( +:| +|\n)(?P<nicks>[^\n ]+|)')
@@ -116,6 +117,7 @@ class IRCHandler(object):
             (IRC_QUIT_RX,     self.handle_irc_quit,     False,            0),
             (IRC_TOPIC_RX,    self.handle_irc_topic,    True,             ALL_PARAMS),
             (IRC_USER_RX,     self.handle_irc_user,     False,            ALL_PARAMS),
+            (IRC_USERHOST_RX, self.handle_irc_userhost, True,             1),
             (IRC_VERSION_RX,  self.handle_irc_version,  True,             0),
             (IRC_WHO_RX,      self.handle_irc_who,      True,             ALL_PARAMS),
             (IRC_WHOIS_RX,    self.handle_irc_whois,    True,             ALL_PARAMS),
@@ -167,6 +169,23 @@ class IRCHandler(object):
                 await self.send_greeting(user)
         else:
             await self.reply_code(user, 'ERR_PASSWDMISMATCH')
+
+    async def handle_irc_userhost(self, user, **nicks):
+        niv = nicks.values()
+        self.logger.debug('Handling USERHOST: %s', str(tuple(niv)))
+
+        reply = ''
+        sep = ''
+        away = '+'
+        for ni in niv:
+            n = ni.lower()
+            if n in self.users.keys():
+                usr = self.users[n]
+                oper = '*' if usr.oper else ''
+                reply += '{}{}{}={}{}@{}'.format(sep, usr.irc_nick, oper, away, usr.irc_username, usr.address)
+                if not sep: sep = ' '
+        if reply:
+           await self.reply_code(user, 'RPL_USERHOST', (reply,))
 
     async def handle_irc_user(self, user, username, realname):
         self.logger.debug('Handling USER: %s, %s', username, realname)

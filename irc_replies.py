@@ -7,6 +7,7 @@ irc_codes = \
   'RPL_MYINFO': ('004', '{} irgramd-{} oS nt'),
   'RPL_ISUPPORT': ('005', 'CASEMAPPING=ascii CHANLIMIT=#&+: CHANTYPES=&#+ CHANMODES=,,,nt CHANNELLEN={} NICKLEN={} SAFELIST :are supported by this server'),
   'RPL_UMODEIS': ('221', ':{}'),
+  'RPL_USERHOST': ('302', ':{}'),
   'RPL_WHOISUSER': ('311', '{} {} {} * :{}'),
   'RPL_WHOISSERVER': ('312', '{} {} :irgramd gateway'),
   'RPL_WHOISOPERATOR': ('313', '{} :is an irgramd operator'),
