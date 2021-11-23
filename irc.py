@@ -26,6 +26,7 @@ VALID_IRC_NICK_CHARS         = VALID_IRC_NICK_FIRST_CHARS + string.digits + '-'
 
 PREFIX          = r'(?ai)(:[^ ]+ +|)'
 IRC_JOIN_RX     = re.compile(PREFIX + r'JOIN( +:| +|\n)(?P<channels>[^\n ]+|)')
+IRC_LIST_RX     = re.compile(PREFIX + r'LIST( +:| +|\n)(?P<channels>[^\n ]+|)')
 IRC_MODE_RX     = re.compile(PREFIX + r'MODE( +|\n)(?P<target>[^ ]+( +|\n)|)(?P<mode>[^ ]+( +|\n)|)(?P<arguments>[^\n]+|)')
 IRC_MOTD_RX     = re.compile(PREFIX + r'MOTD( +:| +|\n)(?P<target>[^\n ]+|)')
 IRC_NAMES_RX    = re.compile(PREFIX + r'NAMES( +:| +|\n)(?P<channels>[^\n ]+|)')
@@ -106,6 +107,7 @@ class IRCHandler(object):
         self.irc_handlers = (
             # pattern              handle           register_required   num_params_required
             (IRC_JOIN_RX,     self.handle_irc_join,     True,             ALL_PARAMS),
+            (IRC_LIST_RX,     self.handle_irc_list,     True,             0),
             (IRC_MODE_RX,     self.handle_irc_mode,     True,             1),
             (IRC_MOTD_RX,     self.handle_irc_motd,     True,             0),
             (IRC_NAMES_RX,    self.handle_irc_names,    True,             ALL_PARAMS),
@@ -222,6 +224,25 @@ class IRCHandler(object):
                     await self.reply_code(user, 'ERR_NOTONCHANNEL', (channel,))
             else:
                 await self.reply_code(user, 'ERR_NOSUCHCHANNEL', (channel,))
+
+    async def handle_irc_list(self, user, channels):
+        self.logger.debug('Handling LIST: %s', channels)
+        entity_cache = [None]
+
+        if channels:
+            chans = channels.split(',')
+        else:
+            chans = self.irc_channels.keys()
+
+        await self.reply_code(user, 'RPL_LISTSTART')
+        for channel in chans:
+            chan = channel.lower()
+            if chan in self.irc_channels.keys():
+                real_chan = self.get_realcaps_name(chan)
+                users_count = len(self.irc_channels[chan])
+                topic = await self.tg.get_channel_topic(chan, entity_cache)
+                await self.reply_code(user, 'RPL_LIST', (real_chan, users_count, topic))
+        await self.reply_code(user, 'RPL_LISTEND')
 
     async def handle_irc_names(self, user, channels):
         self.logger.debug('Handling NAMES: %s', channels)
