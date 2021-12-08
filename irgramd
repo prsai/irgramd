@@ -6,6 +6,7 @@ import asyncio
 
 import tornado.options
 import tornado.tcpserver
+import ssl
 
 # Local modules
 
@@ -15,12 +16,28 @@ from telegram import TelegramHandler
 # IRC Telegram Daemon
 
 class IRCTelegramd(tornado.tcpserver.TCPServer):
-    def __init__(self, address=None, port=6667, config_dir=None, **settings):
-        tornado.tcpserver.TCPServer.__init__(self)
-
+    def __init__(self, address=None, port=None, config_dir=None, **settings):
         self.logger     = logging.getLogger()
+        effective_port  = port
+
+        if settings['tls']:
+            if not settings['tls_cert']: # error
+                self.logger.error('TLS configured but certificate not present')
+                exit(1)
+            tls_context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
+            tls_context.load_cert_chain(settings['tls_cert'], settings['tls_key'])
+            if not effective_port:
+                effective_port = 6697
+            self.logger.info('TLS configured')
+        else:
+            tls_context = None
+            if not effective_port:
+                effective_port = 6667
+
+        tornado.tcpserver.TCPServer.__init__(self, ssl_options=tls_context)
+
         self.address    = address or '127.0.0.1'
-        self.port       = port
+        self.port       = effective_port
         self.config_dir = config_dir or os.path.expanduser('~/.config/irgramd')
         self.irc_handler = None
         self.tg_handler  = None
@@ -46,8 +63,11 @@ class IRCTelegramd(tornado.tcpserver.TCPServer):
 
 if __name__ == '__main__':
     tornado.options.define('address', default=None, help='Address to listen on.')
-    tornado.options.define('port', default=6667, help='Port to listen on.')
+    tornado.options.define('port', default=None, help='Port to listen on. (default 6667, default with TLS 6697)')
     tornado.options.define('config_dir', default=None, help='Configuration directory')
+    tornado.options.define('tls', default=False, help='Use TLS/SSL encrypted connection for IRC server')
+    tornado.options.define('tls_cert', default=None, help='IRC server certificate chain for TLS/SSL, also can contain private key if not defined with `tls_key`')
+    tornado.options.define('tls_key', default=None, help='IRC server private key for TLS/SSL')
     tornado.options.parse_command_line()
 
     options    = tornado.options.options.as_dict()
