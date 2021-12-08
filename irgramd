@@ -62,12 +62,12 @@ class IRCTelegramd(tornado.tcpserver.TCPServer):
 # Main Execution
 
 if __name__ == '__main__':
-    tornado.options.define('address', default=None, help='Address to listen on.')
-    tornado.options.define('port', default=None, help='Port to listen on. (default 6667, default with TLS 6697)')
-    tornado.options.define('config_dir', default=None, help='Configuration directory')
+    tornado.options.define('address', default=None, metavar='ADDRESS', help='Address to listen on.')
+    tornado.options.define('port', default=None, metavar='PORT', help='Port to listen on. (default 6667, default with TLS 6697)')
+    tornado.options.define('config_dir', default=None, metavar='PATH', help='Configuration directory')
     tornado.options.define('tls', default=False, help='Use TLS/SSL encrypted connection for IRC server')
-    tornado.options.define('tls_cert', default=None, help='IRC server certificate chain for TLS/SSL, also can contain private key if not defined with `tls_key`')
-    tornado.options.define('tls_key', default=None, help='IRC server private key for TLS/SSL')
+    tornado.options.define('tls_cert', default=None, metavar='CERTFILE', help='IRC server certificate chain for TLS/SSL, also can contain private key if not defined with `tls_key`')
+    tornado.options.define('tls_key', default=None, metavar='KEYFILE', help='IRC server private key for TLS/SSL')
     tornado.options.parse_command_line()
 
     options    = tornado.options.options.as_dict()
