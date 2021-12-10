@@ -25,7 +25,7 @@ class IRCTelegramd(tornado.tcpserver.TCPServer):
                 self.logger.error('TLS configured but certificate not present')
                 exit(1)
             tls_context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
-            tls_context.load_cert_chain(settings['tls_cert'], settings['tls_key'])
+            tls_context.load_cert_chain(os.path.expanduser(settings['tls_cert']), os.path.expanduser(settings['tls_key']))
             if not effective_port:
                 effective_port = 6697
             self.logger.info('TLS configured')
