@@ -16,8 +16,8 @@ from telegram import TelegramHandler
 # IRC Telegram Daemon
 
 class IRCTelegramd(tornado.tcpserver.TCPServer):
-    def __init__(self, address=None, port=None, config_dir=None, **settings):
-        self.logger     = logging.getLogger()
+    def __init__(self, logger, config_direc, address=None, port=None, **settings):
+        self.logger     = logger
         effective_port  = port
 
         if settings['tls']:
@@ -38,12 +38,10 @@ class IRCTelegramd(tornado.tcpserver.TCPServer):
 
         self.address    = address or '127.0.0.1'
         self.port       = effective_port
-        self.config_dir = config_dir or os.path.expanduser('~/.config/irgramd')
+        self.config_dir = config_direc
         self.irc_handler = None
         self.tg_handler  = None
 
-        if not os.path.exists(self.config_dir):
-            os.makedirs(self.config_dir)
 
     async def handle_stream(self, stream, address):
         await self.irc_handler.run(stream, address)
@@ -51,8 +49,6 @@ class IRCTelegramd(tornado.tcpserver.TCPServer):
     async def run(self):
         self.listen(self.port, self.address)
         self.logger.info('irgramd listening on %s:%s', self.address, self.port)
-        self.logger.info('Configuration Directory: %s', self.config_dir)
-
         self.irc_handler = IRCHandler(self.config_dir)
         self.tg_handler = TelegramHandler(self.irc_handler, self.config_dir)
         self.irc_handler.set_telegram(self.tg_handler)
@@ -62,15 +58,34 @@ class IRCTelegramd(tornado.tcpserver.TCPServer):
 # Main Execution
 
 if __name__ == '__main__':
+    logger = logging.getLogger()
+    tornado.options.define('config', default='irgramdrc', metavar='CONFIGFILE', help='Config file absolute or relative to `config_dir` (command line options override it)')
     tornado.options.define('address', default=None, metavar='ADDRESS', help='Address to listen on.')
     tornado.options.define('port', default=None, metavar='PORT', help='Port to listen on. (default 6667, default with TLS 6697)')
-    tornado.options.define('config_dir', default=None, metavar='PATH', help='Configuration directory')
+    tornado.options.define('config_dir', default='~/.config/irgramd', metavar='PATH', help='Configuration directory where telegram session info is saved')
     tornado.options.define('tls', default=False, help='Use TLS/SSL encrypted connection for IRC server')
     tornado.options.define('tls_cert', default=None, metavar='CERTFILE', help='IRC server certificate chain for TLS/SSL, also can contain private key if not defined with `tls_key`')
     tornado.options.define('tls_key', default=None, metavar='KEYFILE', help='IRC server private key for TLS/SSL')
+    # parse cmd line first time to get --config and --config_dir
+    tornado.options.parse_command_line()
+    config_file = os.path.expanduser(tornado.options.options.config)
+    config_dir = os.path.expanduser(tornado.options.options.config_dir)
+    if not os.path.exists(config_dir):
+        os.makedirs(config_dir)
+    logger.info('Configuration Directory: %s', config_dir)
+
+    if not os.path.isabs(config_file):
+        config_file = os.path.join(config_dir, config_file)
+    if os.path.isfile(config_file):
+        logger.info('Using configuration file: %s', config_file)
+        tornado.options.parse_config_file(config_file)
+    else:
+        logger.warning('Configuration file not present, using only command line options and defaults')
+    # parse cmd line second time to override file options
     tornado.options.parse_command_line()
 
     options    = tornado.options.options.as_dict()
-    irc_server = IRCTelegramd(**options)
+
+    irc_server = IRCTelegramd(logger, config_dir, **options)
     asyncio.get_event_loop().run_until_complete(irc_server.run())
     asyncio.get_event_loop().run_forever()
