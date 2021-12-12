@@ -16,9 +16,9 @@ from telegram import TelegramHandler
 # IRC Telegram Daemon
 
 class IRCTelegramd(tornado.tcpserver.TCPServer):
-    def __init__(self, logger, config_direc, address=None, port=None, **settings):
+    def __init__(self, logger, config_direc, settings):
         self.logger     = logger
-        effective_port  = port
+        effective_port  = settings['port']
 
         if settings['tls']:
             if not settings['tls_cert']: # error
@@ -36,7 +36,7 @@ class IRCTelegramd(tornado.tcpserver.TCPServer):
 
         tornado.tcpserver.TCPServer.__init__(self, ssl_options=tls_context)
 
-        self.address    = address or '127.0.0.1'
+        self.address    = settings['address'] or '127.0.0.1'
         self.port       = effective_port
         self.config_dir = config_direc
         self.irc_handler = None
@@ -86,6 +86,6 @@ if __name__ == '__main__':
 
     options    = tornado.options.options.as_dict()
 
-    irc_server = IRCTelegramd(logger, config_dir, **options)
+    irc_server = IRCTelegramd(logger, config_dir, options)
     asyncio.get_event_loop().run_until_complete(irc_server.run())
     asyncio.get_event_loop().run_forever()
