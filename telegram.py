@@ -27,9 +27,9 @@ TELEGRAM_API_HASH           = ''
     # Telegram
 
 class TelegramHandler(object):
-    def __init__(self, irc, config_dir):
+    def __init__(self, irc, settings):
         self.logger     = logging.getLogger()
-        self.config_dir = config_dir
+        self.config_dir = settings['config_dir']
         self.irc        = irc
         self.authorized = False
         self.id	= None

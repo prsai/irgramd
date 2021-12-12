@@ -46,11 +46,10 @@ IRC_WHOIS_RX    = re.compile(PREFIX + r'WHOIS( +:| +|\n)(?P<nicks>[^\n ]+|)')
 # IRC Handler
 
 class IRCHandler(object):
-    def __init__(self, config_dir):
+    def __init__(self, settings):
         self.logger     = logging.getLogger()
         self.ioloop     = tornado.ioloop.IOLoop.current()
         self.hostname   = socket.gethostname()
-        self.config_dir = config_dir
         self.users      = {}
 
         # Initialize IRC

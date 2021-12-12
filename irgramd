@@ -16,7 +16,7 @@ from telegram import TelegramHandler
 # IRC Telegram Daemon
 
 class IRCTelegramd(tornado.tcpserver.TCPServer):
-    def __init__(self, logger, config_direc, settings):
+    def __init__(self, logger, settings):
         self.logger     = logger
         effective_port  = settings['port']
 
@@ -38,7 +38,6 @@ class IRCTelegramd(tornado.tcpserver.TCPServer):
 
         self.address    = settings['address'] or '127.0.0.1'
         self.port       = effective_port
-        self.config_dir = config_direc
         self.irc_handler = None
         self.tg_handler  = None
 
@@ -46,11 +45,11 @@ class IRCTelegramd(tornado.tcpserver.TCPServer):
     async def handle_stream(self, stream, address):
         await self.irc_handler.run(stream, address)
 
-    async def run(self):
+    async def run(self, settings):
         self.listen(self.port, self.address)
         self.logger.info('irgramd listening on %s:%s', self.address, self.port)
-        self.irc_handler = IRCHandler(self.config_dir)
-        self.tg_handler = TelegramHandler(self.irc_handler, self.config_dir)
+        self.irc_handler = IRCHandler(settings)
+        self.tg_handler = TelegramHandler(self.irc_handler, settings)
         self.irc_handler.set_telegram(self.tg_handler)
         await self.tg_handler.initialize_telegram()
 
@@ -85,7 +84,8 @@ if __name__ == '__main__':
     tornado.options.parse_command_line()
 
     options    = tornado.options.options.as_dict()
+    options['config_dir'] = config_dir
 
-    irc_server = IRCTelegramd(logger, config_dir, options)
-    asyncio.get_event_loop().run_until_complete(irc_server.run())
+    irc_server = IRCTelegramd(logger, options)
+    asyncio.get_event_loop().run_until_complete(irc_server.run(options))
     asyncio.get_event_loop().run_forever()
