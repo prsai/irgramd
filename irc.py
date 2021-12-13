@@ -50,6 +50,7 @@ class IRCHandler(object):
         self.logger     = logging.getLogger()
         self.ioloop     = tornado.ioloop.IOLoop.current()
         self.hostname   = socket.gethostname()
+        self.conf = settings
         self.users      = {}
 
         # Initialize IRC
@@ -153,7 +154,8 @@ class IRCHandler(object):
             await self.reply_code(user, 'ERR_ERRONEUSNICKNAME', (nick,), '*')
         elif ni in self.users.keys():
             await self.reply_code(user, 'ERR_NICKNAMEINUSE', (nick,), '*')
-        elif user.password == user.recv_pass:
+        elif user.pam_auth(nick, self.conf['pam'], self.conf['pam_group'], user.recv_pass) \
+             or user.local_auth(nick, self.conf['irc_nicks'], user.recv_pass, self.conf['irc_password']):
             if user.registered:
                 # rename
                 current = user.irc_nick.lower()
@@ -540,3 +542,46 @@ class IRCUser(object):
             irc.irc_channels[chan].discard(self.irc_nick)
             irc.irc_channels_ops[chan].discard(self.irc_nick)
             irc.irc_channels_founder[chan].discard(self.irc_nick)
+
+    def pam_auth(self, nick, pam, pam_group, recv_pass):
+        if not pam: return False
+
+        # Check if user is in groups (main or others)
+        if pam_group:
+            import pwd
+            import grp
+            try:
+                user_group_id = pwd.getpwnam(nick).pw_gid
+                group_data = grp.getgrnam(pam_group)
+                pam_group_id = group_data.gr_gid
+                group_members = group_data.gr_mem
+                check_group = user_group_id == pam_group_id \
+                              or nick in group_members
+            except:
+                check_group = False
+            if not check_group: return False
+        else:
+            check_group = True
+
+        # Check user authentication (via PAM)
+        import PAM
+        def pam_conv(auth, query_list, userData):
+            resp = []
+            resp.append((recv_pass, 0))
+            return resp
+        p = PAM.pam()
+        p.start('passwd')
+        p.set_item(PAM.PAM_USER, nick)
+        p.set_item(PAM.PAM_CONV, pam_conv)
+        try:
+            p.authenticate()
+            p.acct_mgmt()
+        except:
+            return False
+        else:
+            return True
+
+    def local_auth(self, nick, nicks, recv_pass, irc_pass):
+        return ( nick in nicks
+                 and recv_pass == irc_pass
+               )

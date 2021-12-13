@@ -65,6 +65,10 @@ if __name__ == '__main__':
     tornado.options.define('tls', default=False, help='Use TLS/SSL encrypted connection for IRC server')
     tornado.options.define('tls_cert', default=None, metavar='CERTFILE', help='IRC server certificate chain for TLS/SSL, also can contain private key if not defined with `tls_key`')
     tornado.options.define('tls_key', default=None, metavar='KEYFILE', help='IRC server private key for TLS/SSL')
+    tornado.options.define('pam', default=False, help='Use PAM for IRC authentication, if not set you should set `irc_password`')
+    tornado.options.define('pam_group', default=None, metavar='GROUP', help='Unix group allowed if `pam` enabled, if empty any user is allowed')
+    tornado.options.define('irc_nicks', type=str, multiple=True, metavar='nick,..', help='List of nicks allowed for IRC, if `pam` and optionally `pam_group` are set, PAM authentication will be used instead')
+    tornado.options.define('irc_password', default='', metavar='PASSWORD', help='Password for IRC authentication, if `pam` is set, PAM authentication will be used instead')
     # parse cmd line first time to get --config and --config_dir
     tornado.options.parse_command_line()
     config_file = os.path.expanduser(tornado.options.options.config)
