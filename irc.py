@@ -155,7 +155,7 @@ class IRCHandler(object):
         elif ni in self.users.keys():
             await self.reply_code(user, 'ERR_NICKNAMEINUSE', (nick,), '*')
         elif user.pam_auth(nick, self.conf['pam'], self.conf['pam_group'], user.recv_pass) \
-             or user.local_auth(nick, self.conf['irc_nicks'], user.recv_pass, self.conf['irc_password']):
+             or user.local_auth(nick, self.conf['irc_nicks'], user.recv_pass, self.conf['irc_password'], self.conf['pam']):
             if user.registered:
                 # rename
                 current = user.irc_nick.lower()
@@ -560,8 +560,6 @@ class IRCUser(object):
             except:
                 check_group = False
             if not check_group: return False
-        else:
-            check_group = True
 
         # Check user authentication (via PAM)
         import PAM
@@ -581,7 +579,8 @@ class IRCUser(object):
         else:
             return True
 
-    def local_auth(self, nick, nicks, recv_pass, irc_pass):
-        return ( nick in nicks
+    def local_auth(self, nick, nicks, recv_pass, irc_pass, pam):
+        return ( not pam
+                 and nick in nicks
                  and recv_pass == irc_pass
                )
