@@ -253,16 +253,10 @@ class TelegramHandler(object):
     async def handle_telegram_channel_message(self, event):
         self.logger.debug('Handling Telegram Channel Message: %s', event)
 
-        # Join IRC channel if not already in it
         entity  = await event.message.get_chat()
         channel = await self.get_irc_channel_from_telegram_id(event.message.chat_id, entity)
-#        if channel not in self.irc.irc_channels:
-#            await self.irc.join_irc_channel(self.irc.irc_nick, channel, True)
 
         user = self.get_irc_user_from_telegram(event.sender_id)
-
-#        if nick not in self.irc.irc_channels[channel]:
-#            await self.irc.join_irc_channel(nick, channel, False)
 
         # Format messages with media
         messages = event.message.message.splitlines() if event.message.message else []
