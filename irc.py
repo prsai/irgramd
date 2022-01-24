@@ -13,7 +13,7 @@ import tornado.ioloop
 
 from include import VERSION, CHAN_MAX_LENGHT, NICK_MAX_LENGTH
 from irc_replies import irc_codes
-from utils import chunks, set_replace
+from utils import chunks, set_replace, split_lines
 
 # Constants
 
@@ -367,6 +367,15 @@ class IRCHandler(object):
         user.stream.close()
 
     # IRC functions
+
+    async def send_msg(self, source, target, message):
+        messages = split_lines(message)
+        source_mask = source.get_irc_mask() if source else ''
+        for msg in messages:
+            for irc_user in (x for x in self.users.values() if x.stream):
+                src_mask = source_mask if source_mask else irc_user.get_irc_mask()
+                tgt = target if target else irc_user.irc_nick
+                await self.send_irc_command(irc_user, ':{} PRIVMSG {} :{}'.format(src_mask, tgt, msg))
 
     async def reply_command(self, user, prfx, comm, params):
         prefix = self.hostname if prfx == SRV else prfx.get_irc_mask()

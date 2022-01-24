@@ -243,12 +243,9 @@ class TelegramHandler(object):
         self.logger.debug('Handling Telegram Private Message: %s', event)
 
         user = self.get_irc_user_from_telegram(event.sender_id)
-        for message in event.message.message.splitlines():
-            for irc_user in [x for x in self.irc.users.values() if x.stream]:
-                usr = user if user else irc_user
-                await self.irc.send_irc_command(irc_user, ':{} PRIVMSG {} :{}'.format(
-                    usr.get_irc_mask(), irc_user.irc_nick, message
-                ))
+        message = event.message.message if event.message.message else ''
+
+        await self.irc.send_msg(user, None, message)
 
     async def handle_telegram_channel_message(self, event):
         self.logger.debug('Handling Telegram Channel Message: %s', event)
@@ -259,21 +256,15 @@ class TelegramHandler(object):
         user = self.get_irc_user_from_telegram(event.sender_id)
 
         # Format messages with media
-        messages = event.message.message.splitlines() if event.message.message else []
-        if event.message.media and (event.message.photo or event.message.gif):
-            message = await self.download_telegram_media(event.message, 'Image')
-            if message:
-                messages.insert(0, message)
-        elif event.message.media and (event.message.sticker):
-            messages.insert(0, 'Sticker: {}'.format(event.message.sticker.id))
+        message = event.message.message if event.message.message else ''
+#        if event.message.media and (event.message.photo or event.message.gif):
+#            message = await self.download_telegram_media(event.message, 'Image')
+#            if message:
+#                messages.insert(0, message)
+#        elif event.message.media and (event.message.sticker):
+#            messages.insert(0, 'Sticker: {}'.format(event.message.sticker.id))
 
-        # Send all messages to IRC
-        for message in messages:
-            for irc_user in [x for x in self.irc.users.values() if x.stream]:
-                usr = user if user else irc_user
-                await self.irc.send_irc_command(irc_user, ':{} PRIVMSG {} :{}'.format(
-                    usr.get_irc_mask(), channel, message
-                ))
+        await self.irc.send_msg(user, channel, message)
 
     async def handle_telegram_chat_action(self, event):
         self.logger.debug('Handling Telegram Chat Action: %s', event)
