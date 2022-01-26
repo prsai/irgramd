@@ -35,6 +35,7 @@ class TelegramHandler(object):
         self.id	= None
         self.tg_username = None
         self.channels_date = {}
+        self.mid = mesg_id('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%+./_~')
 
     async def initialize_telegram(self):
         # Setup media folder
@@ -234,29 +235,30 @@ class TelegramHandler(object):
     async def handle_telegram_message(self, event):
         self.logger.debug('Handling Telegram Message: %s', event)
 
-        if event.message.is_private:
-            await self.handle_telegram_private_message(event)
-        else:
-            await self.handle_telegram_channel_message(event)
-
-    async def handle_telegram_private_message(self, event):
-        self.logger.debug('Handling Telegram Private Message: %s', event)
+        if self.mid.mesg_base is None:
+            self.mid.mesg_base = event.message.id
 
         user = self.get_irc_user_from_telegram(event.sender_id)
-        message = event.message.message if event.message.message else ''
+        mid = self.mid.num_to_id(event.message.id - self.mid.mesg_base)
+        message = '[{}] {}'.format(mid, event.message.message)
+
+        if event.message.is_private:
+            await self.handle_telegram_private_message(user, message)
+        else:
+            await self.handle_telegram_channel_message(event, user, message)
+
+    async def handle_telegram_private_message(self, user, message):
+        self.logger.debug('Handling Telegram Private Message: %s, %s', user, message)
 
         await self.irc.send_msg(user, None, message)
 
-    async def handle_telegram_channel_message(self, event):
+    async def handle_telegram_channel_message(self, event, user, message):
         self.logger.debug('Handling Telegram Channel Message: %s', event)
 
         entity  = await event.message.get_chat()
         channel = await self.get_irc_channel_from_telegram_id(event.message.chat_id, entity)
 
-        user = self.get_irc_user_from_telegram(event.sender_id)
-
         # Format messages with media
-        message = event.message.message if event.message.message else ''
 #        if event.message.media and (event.message.photo or event.message.gif):
 #            message = await self.download_telegram_media(event.message, 'Image')
 #            if message:
@@ -314,3 +316,28 @@ class TelegramHandler(object):
 
         os.unlink(local_path)
         return tag + ': ' + response.body.decode().strip()
+
+class mesg_id:
+    def __init__(self, alpha):
+        self.alpha = alpha
+        self.base = len(alpha)
+        self.alphaval = { i:v for v, i in enumerate(alpha) }
+        self.mesg_base = None
+
+    def num_to_id(self, num, neg=''):
+        if num < 0: return self.num_to_id(-num, '-')
+        (high, low) = divmod(num, self.base)
+        if high >= self.base:
+            aux = self.num_to_id(high)
+            return neg + aux + self.alpha[low]
+        else:
+            return neg + self.alpha[high] + self.alpha[low]
+
+    def id_to_num(self, id, n=1):
+        if id:
+            if id[0] == '-': return self.id_to_num(id[1:], -1)
+            aux = self.alphaval[id[-1:]] * n
+            sum = self.id_to_num(id[:-1], n * self.base)
+            return sum + aux
+        else:
+            return 0
