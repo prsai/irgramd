@@ -350,7 +350,13 @@ class IRCHandler(object):
     async def handle_irc_privmsg(self, user, nick, message):
         self.logger.debug('Handling PRIVMSG: %s, %s', nick, message)
 
-        target = self.tg.tg_username if nick == user.irc_nick else nick
+        if nick == user.irc_nick:
+            target = self.tg.tg_username
+            # Echo message to the user him/herself in IRC
+            # because no event will be received from Telegram
+            await self.send_msg(user, None, message)
+        else:
+            target = nick
         tgt = target.lower()
 
         if tgt not in self.iid_to_tid:
