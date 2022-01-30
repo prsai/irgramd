@@ -198,8 +198,9 @@ class TelegramHandler(object):
             self.irc.users[irc_nick].bot = bot
         return bot
 
-    async def get_channel_topic(self, channel, entity_cache=[None]):
+    async def get_channel_topic(self, channel, entity_cache):
         tid = self.get_tid(channel)
+        # entity_cache should be a list to be a persistent and by reference value
         if entity_cache[0]:
             entity = entity_cache[0]
         else:
@@ -208,11 +209,12 @@ class TelegramHandler(object):
         entity_type = self.get_entity_type(entity)
         return 'Telegram ' + entity_type + ' ' + str(tid) + ': ' + entity.title
 
-    async def get_channel_creation(self, channel, entity_cache=[None]):
+    async def get_channel_creation(self, channel, entity_cache):
         tid = self.get_tid(channel)
         if tid in self.channels_date.keys():
             timestamp = self.channels_date[tid]
         else:
+            # entity_cache should be a list to be a persistent and by reference value
             if entity_cache[0]:
                 entity = entity_cache[0]
             else:
