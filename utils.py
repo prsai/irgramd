@@ -1,6 +1,7 @@
 
 import itertools
 import textwrap
+import re
 
 # Utilities
 
@@ -41,3 +42,6 @@ def split_lines(message):
             messages_limited += wrapped
     del wr
     return messages_limited
+
+def sanitize_filename(fn):
+    return re.sub('[/{}<>()"\'\\|&]', '', fn).strip('-')
