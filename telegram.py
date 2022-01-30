@@ -320,7 +320,9 @@ class TelegramHandler(object):
             else:
                 caption = ''
 
-        elif message.photo:        media_type = 'photo'
+        elif message.photo:
+            size = [x for x in message.media.photo.sizes if x.type == 'x'][0]
+            media_type = 'photo:{}x{}'.format(size.w, size.h)
         elif message.audio:        media_type = 'audio'
         elif message.voice:        media_type = 'rec'
         elif message.video:        media_type = 'video'
