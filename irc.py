@@ -228,7 +228,6 @@ class IRCHandler(object):
 
     async def handle_irc_list(self, user, channels):
         self.logger.debug('Handling LIST: %s', channels)
-        entity_cache = [None]
 
         if channels:
             chans = channels.split(',')
@@ -241,7 +240,7 @@ class IRCHandler(object):
             if chan in self.irc_channels.keys():
                 real_chan = self.get_realcaps_name(chan)
                 users_count = len(self.irc_channels[chan])
-                topic = await self.tg.get_channel_topic(chan, entity_cache)
+                topic = await self.tg.get_channel_topic(chan, [None])
                 await self.reply_code(user, 'RPL_LIST', (real_chan, users_count, topic))
         await self.reply_code(user, 'RPL_LISTEND')
 
