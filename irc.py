@@ -281,7 +281,7 @@ class IRCHandler(object):
 
         chan = channel.lower()
         real_chan = self.get_realcaps_name(chan)
-        await self.irc_channel_topic(user, real_chan)
+        await self.irc_channel_topic(user, real_chan, [None])
 
     async def handle_irc_ping(self, user, payload):
         self.logger.debug('Handling PING: %s', payload)
@@ -483,7 +483,7 @@ class IRCHandler(object):
         self.irc_channels_ops[chan].discard(user.irc_nick)
         self.irc_channels_founder[chan].discard(user.irc_nick)
 
-    async def irc_channel_topic(self, user, channel, entity_cache=[None]):
+    async def irc_channel_topic(self, user, channel, entity_cache):
         chan = channel.lower()
         topic = await self.tg.get_channel_topic(chan, entity_cache)
         timestamp = await self.tg.get_channel_creation(chan, entity_cache)
