@@ -34,7 +34,7 @@ IRC_NICK_RX     = re.compile(PREFIX + r'NICK( +:| +|\n)(?P<nick>[^\n ]+|)')
 IRC_PART_RX     = re.compile(PREFIX + r'PART( +|\n)(?P<channels>[^ ]+|)( +:| +|\n|)(?P<reason>[^\n]+|)')
 IRC_PASS_RX     = re.compile(PREFIX + r'PASS( +:| +|\n)(?P<password>[^\n ]+|)')
 IRC_PING_RX     = re.compile(PREFIX + r'PING( +:| +|\n)(?P<payload>[^\n]+|)')
-IRC_PRIVMSG_RX  = re.compile(PREFIX + r'PRIVMSG( +|\n)(?P<nick>[^ ]+)( +:| +|\n)(?P<message>[^\n]+|)')
+IRC_PRIVMSG_RX  = re.compile(PREFIX + r'PRIVMSG( +|\n)(?P<target>[^ ]+)( +:| +|\n)(?P<message>[^\n]+|)')
 IRC_QUIT_RX     = re.compile(PREFIX + r'QUIT( +:| +|\n)(?P<reason>[^\n]+|)')
 IRC_TOPIC_RX    = re.compile(PREFIX + r'TOPIC( +:| +|\n)(?P<channel>[^\n ]+|)')
 IRC_USER_RX     = re.compile(PREFIX + r'USER( +|\n)(?P<username>[^ ]+) +[^ ]+ +[^ ]+( +:| +|\n)(?P<realname>[^\n]+|)')
@@ -346,17 +346,22 @@ class IRCHandler(object):
         else:
             await self.reply_code(user, 'ERR_NOSUCHSERVER', (target,))
 
-    async def handle_irc_privmsg(self, user, nick, message):
-        self.logger.debug('Handling PRIVMSG: %s, %s', nick, message)
+    async def handle_irc_privmsg(self, user, target, message):
+        self.logger.debug('Handling PRIVMSG: %s, %s', target, message)
 
-        if nick == user.irc_nick:
-            target = self.tg.tg_username
+        tgl = target.lower()
+        # Echo channel messages from IRC to other IRC connections
+        # because they won't receive event from Telegram
+        if tgl in self.irc_channels.keys():
+            await self.send_msg_others(user, tgl, message)
+
+        if tgl == user.irc_nick:
+            tgt = self.tg.tg_username.lower()
             # Echo message to the user him/herself in IRC
             # because no event will be received from Telegram
             await self.send_msg(user, None, message)
         else:
-            target = nick
-        tgt = target.lower()
+            tgt = tgl
 
         if tgt not in self.iid_to_tid:
             print('TODO: handle error')
@@ -375,12 +380,37 @@ class IRCHandler(object):
 
     async def send_msg(self, source, target, message):
         messages = split_lines(message)
+        tgt = target.lower() if target else ''
+        is_chan = tgt in self.irc_channels.keys()
+        # source None (False): it's self Telegram user, see [1]
         source_mask = source.get_irc_mask() if source else ''
         for msg in messages:
-            for irc_user in (x for x in self.users.values() if x.stream):
-                src_mask = source_mask if source_mask else irc_user.get_irc_mask()
-                tgt = target if target else irc_user.irc_nick
-                await self.send_irc_command(irc_user, ':{} PRIVMSG {} :{}'.format(src_mask, tgt, msg))
+            if is_chan:
+                irc_users = (u for u in self.users.values() if u.stream and u.irc_nick in self.irc_channels[tgt])
+            else:
+                irc_users = (u for u in self.users.values() if u.stream)
+
+            for irc_user in irc_users:
+                await self.send_privmsg(irc_user, source_mask, target, msg)
+
+    async def send_msg_others(self, source, target, message):
+        source_mask = source.get_irc_mask()
+        is_chan = target in self.irc_channels.keys()
+        if is_chan:
+            irc_users = (u for u in self.users.values() if u.stream and u.irc_nick != source.irc_nick
+                                                        and u.irc_nick in self.irc_channels[target])
+        else:
+            irc_users = (u for u in self.users.values() if u.stream and u.irc_nick != source.irc_nick)
+
+        for irc_user in irc_users:
+            await self.send_privmsg(irc_user, source_mask, target, message)
+
+    async def send_privmsg(self, user, source_mask, target, msg):
+        # reference [1]
+        src_mask = source_mask if source_mask else user.get_irc_mask()
+        # target None (False): it's private, not a channel
+        tgt = target if target else user.irc_nick
+        await self.send_irc_command(user, ':{} PRIVMSG {} :{}'.format(src_mask, tgt, msg))
 
     async def reply_command(self, user, prfx, comm, params):
         prefix = self.hostname if prfx == SRV else prfx.get_irc_mask()
