@@ -150,6 +150,9 @@ class IRCHandler(object):
         self.logger.debug('Handling NICK: %s', nick)
 
         ni = nick.lower()
+        current = user.irc_nick.lower() if user.irc_nick else None
+        if ni == current:
+            return
         if not user.valid_nick(nick):
             await self.reply_code(user, 'ERR_ERRONEUSNICKNAME', (nick,), '*')
         elif ni in self.users.keys():
@@ -158,7 +161,6 @@ class IRCHandler(object):
              or user.local_auth(nick, self.conf['irc_nicks'], user.recv_pass, self.conf['irc_password'], self.conf['pam']):
             if user.registered:
                 # rename
-                current = user.irc_nick.lower()
                 await self.send_users_irc(user, 'NICK', (nick,))
                 del self.users[current]
                 for ch in self.irc_channels.keys():
