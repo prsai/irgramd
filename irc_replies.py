@@ -31,7 +31,7 @@ irc_codes = \
   'RPL_MOTDSTART': ('375', ':- {} Message of the day - '),
   'RPL_MOTD': ('372', ':- {}'),
   'RPL_ENDOFMOTD': ('376', 'End of MOTD command'),
-  'ERR_NOSUCHNICK': ('401', '{} :Nick not found'),
+  'ERR_NOSUCHNICK': ('401', '{} :Nick not found or available'),
   'ERR_NOSUCHSERVER': ('402', '{} :Target not found'),
   'ERR_NOSUCHCHANNEL': ('403', '{} :Channel not found'),
   'ERR_CANNOTSENDTOCHAN': ('404', 'Cannot send to channel'),

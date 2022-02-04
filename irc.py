@@ -363,11 +363,11 @@ class IRCHandler(object):
         else:
             tgt = tgl
 
-        if tgt not in self.iid_to_tid:
-            print('TODO: handle error')
-
-        telegram_id = self.iid_to_tid[tgt]
-        await self.tg.telegram_client.send_message(telegram_id, message)
+        if tgt in self.iid_to_tid:
+            telegram_id = self.iid_to_tid[tgt]
+            await self.tg.telegram_client.send_message(telegram_id, message)
+        else:
+            await self.reply_code(user, 'ERR_NOSUCHNICK', (target,))
 
     async def handle_irc_quit(self, user, reason):
         self.logger.debug('Handling TOPIC: %s', reason)
