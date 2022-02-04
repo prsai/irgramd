@@ -455,8 +455,8 @@ class IRCHandler(object):
         await self.reply_code(user, 'RPL_MOTD', ('messaging network as a regular user account (not bot)',))
         await self.reply_code(user, 'RPL_MOTD', ('',))
         await self.reply_code(user, 'RPL_MOTD', ('irgramd is an open source project that you can find on',))
-        await self.reply_code(user, 'RPL_MOTD', ('git repository: https://github.com/prsai/irgramd',))
         await self.reply_code(user, 'RPL_MOTD', ('darcs repository: https://src.presi.org/darcs/irgramd',))
+        await self.reply_code(user, 'RPL_MOTD', ('git repository: https://github.com/prsai/irgramd',))
         await self.reply_code(user, 'RPL_ENDOFMOTD')
 
     async def send_isupport(self, user):
