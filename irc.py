@@ -173,7 +173,10 @@ class IRCHandler(object):
                 user.registered = True
                 await self.send_greeting(user)
         else:
-            await self.reply_code(user, 'ERR_PASSWDMISMATCH')
+            if user.registered:
+                await self.reply_code(user, 'ERR_ERRONEUSNICKNAME', (nick,))
+            else:
+                await self.reply_code(user, 'ERR_PASSWDMISMATCH')
 
     async def handle_irc_userhost(self, user, **nicks):
         niv = nicks.values()
