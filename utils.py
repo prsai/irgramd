@@ -44,4 +44,4 @@ def split_lines(message):
     return messages_limited
 
 def sanitize_filename(fn):
-    return re.sub('[/{}<>()"\'\\|&]', '', fn).strip('-').replace(' ','_')
+    return FILENAME_INVALID_CHARS.sub('', fn).strip('-').replace(' ','_')

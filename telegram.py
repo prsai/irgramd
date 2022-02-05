@@ -15,6 +15,7 @@ from utils import sanitize_filename
 # Constants
 
 TL_TYPES_IDENT = re.compile(r"<class 'telethon.tl.types.([^']+)'>")
+FILENAME_INVALID_CHARS = re.compile('[/{}<>()"\'\\|&]')
 
 # Configuration
 
