@@ -131,6 +131,10 @@ class TelegramHandler(object):
         name = name.replace(' ', '_')
         return name
 
+    async def get_telegram_display_name_me(self):
+        tg_user = await self.telegram_client.get_me()
+        return self.get_telegram_display_name(tg_user)
+
     def get_telegram_channel(self, chat):
         return '#' + chat.title.replace(' ', '-')
 

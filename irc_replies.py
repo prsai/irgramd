@@ -20,7 +20,7 @@ irc_codes = \
   'RPL_LISTEND': ('323', ':End of /LIST'),
   'RPL_CHANNELMODEIS': ('324', '{} {} {}'),
   'RPL_CREATIONTIME': ('329', '{} {}'),
-  'RPL_WHOISACCOUNT': ('330', '{} {} :Telegram name'),
+  'RPL_WHOISACCOUNT': ('330', '{} {} :has Telegram account'),
   'RPL_TOPIC': ('332', '{} :{}'),
   'RPL_TOPICWHOTIME': ('333', '{} {} {}'),
   'RPL_WHOISBOT': ('335', '{} :is a Telegram bot'),

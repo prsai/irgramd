@@ -329,7 +329,8 @@ class IRCHandler(object):
                 if idle != None: await self.reply_code(user, 'RPL_WHOISIDLE', (real_ni, idle))
                 if usr.oper: await self.reply_code(user, 'RPL_WHOISOPERATOR', (real_ni,))
                 if usr.stream: await self.reply_code(user, 'RPL_WHOISACCOUNT', (real_ni,
-                                   '{}!{}@Telegram'.format(self.tg.tg_username, self.tg.id
+                                                           '{}|{}!{}@Telegram'.format(self.tg.tg_username,
+                                                           await self.tg.get_telegram_display_name_me(), self.tg.id
                                )))
                 if await self.tg.is_bot(ni):
                     await self.reply_code(user, 'RPL_WHOISBOT', (real_ni,))
