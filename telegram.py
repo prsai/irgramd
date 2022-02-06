@@ -14,7 +14,6 @@ from utils import sanitize_filename
 
 # Constants
 
-TL_TYPES_IDENT = re.compile(r"<class 'telethon.tl.types.([^']+)'>")
 FILENAME_INVALID_CHARS = re.compile('[/{}<>()"\'\\|&]')
 
 # Configuration
@@ -240,7 +239,7 @@ class TelegramHandler(object):
         return tid
 
     def get_entity_type(self, entity):
-        return TL_TYPES_IDENT.match(str(type(entity))).groups()[0]
+        return type(entity).__name__
 
     async def handle_telegram_message(self, event):
         self.logger.debug('Handling Telegram Message: %s', event)
