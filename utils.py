@@ -45,3 +45,15 @@ def split_lines(message):
 
 def sanitize_filename(fn):
     return FILENAME_INVALID_CHARS.sub('', fn).strip('-').replace(' ','_')
+
+def remove_slash(url):
+    return url[:-1] if url[-1:] == '/' else url
+
+def remove_http_s(url):
+    if url[:8] == 'https://':
+        surl = url[8:]
+    elif url[:7] == 'http://':
+        surl = url[7:]
+    else:
+        surl = url
+    return remove_slash(surl)
