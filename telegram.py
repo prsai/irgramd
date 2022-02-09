@@ -10,7 +10,7 @@ from telethon import types as tgty
 
 from include import CHAN_MAX_LENGHT, NICK_MAX_LENGTH
 from irc import IRCUser
-from utils import sanitize_filename, remove_slash, remove_http_s
+from utils import sanitize_filename, remove_slash, remove_http_s, get_human_size, get_human_duration
 
 # Configuration
 
@@ -341,12 +341,17 @@ class TelegramHandler(object):
                 media_type = 'photo'
         elif message.audio:        media_type = 'audio'
         elif message.voice:        media_type = 'rec'
-        elif message.video:        media_type = 'video'
+        elif message.video:
+            size = get_human_size(message.media.document.size)
+            attrib = next(x for x in message.media.document.attributes if isinstance(x, tgty.DocumentAttributeVideo))
+            dur = get_human_duration(attrib.duration)
+            media_type = 'video:{},{}'.format(size, dur)
         elif message.video_note:   media_type = 'videorec'
         elif message.gif:          media_type = 'anim'
         elif message.sticker:      media_type = 'sticker'
-        elif message.document:     media_type = 'file'
-
+        elif message.document:
+            size = get_human_size(message.media.document.size)
+            media_type = 'file:{}'.format(size)
         elif message.contact:
             media_type = 'contact'
             caption = ''

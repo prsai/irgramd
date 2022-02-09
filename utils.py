@@ -61,3 +61,31 @@ def remove_http_s(url):
     else:
         surl = url
     return remove_slash(surl)
+
+def get_human_size(size):
+    human_units = ('', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
+
+    def get_human_size_values(size, unit_pos=0):
+        aux = size / 1024.0
+        if aux > 1: return get_human_size_values(aux, unit_pos + 1)
+        else: return size, human_units[unit_pos]
+
+    if size <= 1237940039285380274899124224:    # 1024Y
+        num, unit = get_human_size_values(size)
+    else:
+        num = size / 1208925819614629174706176  # 1Y
+        unit = 'Y'
+
+    fs = '{:.1f}{}' if num < 10 else '{:.0f}{}'
+
+    return fs.format(num, unit)
+
+def get_human_duration(duration):
+    res = ''
+    x, s = divmod(duration, 60)
+    h, m = divmod(x, 60)
+
+    if h > 0: res = str(h) + 'h'
+    if m > 0: res += str(m) + 'm'
+    if s > 0: res += str(s) + 's'
+    return res
