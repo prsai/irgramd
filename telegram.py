@@ -12,10 +12,6 @@ from include import CHAN_MAX_LENGHT, NICK_MAX_LENGTH
 from irc import IRCUser
 from utils import sanitize_filename, remove_slash, remove_http_s
 
-# Constants
-
-FILENAME_INVALID_CHARS = re.compile('[/{}<>()"\'\\|&]')
-
 # Configuration
 
 # GET API_ID and API_HASH from https://my.telegram.org/apps

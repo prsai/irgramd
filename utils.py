@@ -3,6 +3,10 @@ import itertools
 import textwrap
 import re
 
+# Constants
+
+FILENAME_INVALID_CHARS = re.compile('[/{}<>()"\'\\|&]')
+
 # Utilities
 
 def chunks(iterable, n, fillvalue=None):
