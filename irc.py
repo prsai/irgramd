@@ -258,20 +258,30 @@ class IRCHandler(object):
     async def handle_irc_mode(self, user, target, mode, arguments):
         self.logger.debug('Handling MODE: %s, %s, %s', target, mode, arguments)
 
-        if not mode:
-            tgt = target.lower()
-            if tgt in self.users.keys():
-                if tgt == user.irc_nick:
-                    await self.mode_user(user, user, False)
-                else:
-                    await self.reply_code(user, 'ERR_USERSDONTMATCH')
-            elif tgt[0] == '#':
-                if tgt in self.irc_channels.keys():
-                    await self.mode_channel(user, target, False)
-                else:
-                    await self.reply_code(user, 'ERR_NOSUCHCHANNEL', (target,))
+        is_user = False
+        is_channel = False
+
+        tgt = target.lower()
+        if tgt in self.users.keys():
+            if tgt == user.irc_nick:
+                is_user = True
             else:
-                await self.reply_code(user, 'ERR_NOSUCHNICK', (target,))
+                await self.reply_code(user, 'ERR_USERSDONTMATCH')
+        elif tgt[0] == '#':
+            if tgt in self.irc_channels.keys():
+                is_channel = True
+            else:
+                await self.reply_code(user, 'ERR_NOSUCHCHANNEL', (target,))
+        else:
+            await self.reply_code(user, 'ERR_NOSUCHNICK', (target,))
+
+        if not mode:
+            if is_user:
+                await self.mode_user(user, user, False)
+            if is_channel:
+                await self.mode_channel(user, target, False)
+        elif mode == 'b' and is_channel:
+            await self.reply_code(user, 'RPL_ENDOFBANLIST', (target,))
 
     async def handle_irc_motd(self, user, target):
         self.logger.debug('Handling MOTD: %s', target)

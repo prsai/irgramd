@@ -28,6 +28,7 @@ irc_codes = \
   'RPL_WHOREPLY': ('352', '{} {} {} {} {} H{} :0 {}'),
   'RPL_NAMREPLY': ('353', '{} {} :{}'),
   'RPL_ENDOFNAMES': ('366', '{} :End of NAME reply'),
+  'RPL_ENDOFBANLIST': ('368', '{} :End of channel ban list'),
   'RPL_MOTDSTART': ('375', ':- {} Message of the day - '),
   'RPL_MOTD': ('372', ':- {}'),
   'RPL_ENDOFMOTD': ('376', 'End of MOTD command'),
