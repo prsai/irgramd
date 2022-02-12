@@ -49,7 +49,7 @@ class IRCHandler(object):
     def __init__(self, settings):
         self.logger     = logging.getLogger()
         self.ioloop     = tornado.ioloop.IOLoop.current()
-        self.hostname   = socket.gethostname()
+        self.hostname   = socket.getfqdn()
         self.conf = settings
         self.users      = {}
 
@@ -286,7 +286,7 @@ class IRCHandler(object):
     async def handle_irc_motd(self, user, target):
         self.logger.debug('Handling MOTD: %s', target)
 
-        if not target or target == self.hostname:
+        if not target or target == self.gethostname(user):
             await self.send_motd(user)
         else:
             await self.reply_code(user, 'ERR_NOSUCHSERVER', (target,))
@@ -301,7 +301,7 @@ class IRCHandler(object):
     async def handle_irc_ping(self, user, payload):
         self.logger.debug('Handling PING: %s', payload)
 
-        await self.reply_command(user, SRV, 'PONG', (self.hostname, payload))
+        await self.reply_command(user, SRV, 'PONG', (self.gethostname(user), payload))
 
     async def handle_irc_who(self, user, target):
         self.logger.debug('Handling WHO: %s', target)
@@ -320,7 +320,7 @@ class IRCHandler(object):
                 usr = self.users[usr.lower()]
             op = self.get_irc_op(usr.irc_nick, chan)
             await self.reply_code(user, 'RPL_WHOREPLY', (chan, usr.irc_username,
-                usr.address, self.hostname, usr.irc_nick, op, usr.irc_realname
+                usr.address, self.gethostname(user), usr.irc_nick, op, usr.irc_realname
             ))
         await self.reply_code(user, 'RPL_ENDOFWHO', (chan,))
 
@@ -332,7 +332,7 @@ class IRCHandler(object):
             if ni in self.users.keys():
                 usr = self.users[ni]
                 await self.reply_code(user, 'RPL_WHOISUSER', (real_ni, usr.irc_username, usr.address, usr.irc_realname))
-                await self.reply_code(user, 'RPL_WHOISSERVER', (real_ni, self.hostname))
+                await self.reply_code(user, 'RPL_WHOISSERVER', (real_ni, self.gethostname(user)))
                 chans = usr.get_channels(self)
                 if chans: await self.reply_code(user, 'RPL_WHOISCHANNELS', (real_ni, chans))
                 idle = await self.tg.get_telegram_idle(ni)
@@ -346,7 +346,7 @@ class IRCHandler(object):
                     await self.reply_code(user, 'RPL_WHOISBOT', (real_ni,))
                 elif usr.tls or not usr.stream:
                     proto = 'TLS' if usr.tls else 'MTProto'
-                    server = self.hostname if usr.stream else 'Telegram'
+                    server = self.gethostname(user) if usr.stream else 'Telegram'
                     await self.reply_code(user, 'RPL_WHOISSECURE', (real_ni, proto, server))
                 await self.reply_code(user, 'RPL_ENDOFWHOIS', (real_ni,))
             else:
@@ -356,8 +356,8 @@ class IRCHandler(object):
         self.logger.debug('Handling VERSION: %s', target)
 
         tgt = target.lower()
-        if not tgt or tgt == self.hostname or tgt in self.users.keys():
-            await self.reply_code(user, 'RPL_VERSION', (VERSION, self.hostname))
+        if not tgt or tgt == self.gethostname(user) or tgt in self.users.keys():
+            await self.reply_code(user, 'RPL_VERSION', (VERSION, self.gethostname(user)))
             await self.send_isupport(user)
         else:
             await self.reply_code(user, 'ERR_NOSUCHSERVER', (target,))
@@ -429,7 +429,7 @@ class IRCHandler(object):
         await self.send_irc_command(user, ':{} PRIVMSG {} :{}'.format(src_mask, tgt, msg))
 
     async def reply_command(self, user, prfx, comm, params):
-        prefix = self.hostname if prfx == SRV else prfx.get_irc_mask()
+        prefix = self.gethostname(user) if prfx == SRV else prfx.get_irc_mask()
         p = len(params)
         if p == 1:
             fstri = ':{} {} {}'
@@ -442,22 +442,22 @@ class IRCHandler(object):
         if params:
             nick = client if client else user.irc_nick
             rest = tail.format(*params)
-            stri = ':{} {} {} {}'.format(self.hostname, num, nick, rest)
+            stri = ':{} {} {} {}'.format(self.gethostname(user), num, nick, rest)
         else:
-            stri = ':{} {} {} :{}'.format(self.hostname, num, user.irc_nick, tail)
+            stri = ':{} {} {} :{}'.format(self.gethostname(user), num, user.irc_nick, tail)
         await self.send_irc_command(user, stri)
 
     async def send_greeting(self, user):
         await self.reply_code(user, 'RPL_WELCOME', (user.irc_nick,))
-        await self.reply_code(user, 'RPL_YOURHOST', (self.hostname, VERSION))
+        await self.reply_code(user, 'RPL_YOURHOST', (self.gethostname(user), VERSION))
         await self.reply_code(user, 'RPL_CREATED', (self.start_time,))
-        await self.reply_code(user, 'RPL_MYINFO', (self.hostname, VERSION))
+        await self.reply_code(user, 'RPL_MYINFO', (self.gethostname(user), VERSION))
         await self.send_isupport(user)
         await self.send_motd(user)
         await self.mode_user(user, user, True)
 
     async def send_motd(self, user):
-        await self.reply_code(user, 'RPL_MOTDSTART', (self.hostname,))
+        await self.reply_code(user, 'RPL_MOTDSTART', (self.gethostname(user),))
         await self.reply_code(user, 'RPL_MOTD', ('Welcome to the irgramd server',))
         await self.reply_code(user, 'RPL_MOTD', ('',))
         await self.reply_code(user, 'RPL_MOTD', ('This is not a normal IRC server, it\'s a gateway that',))
@@ -564,10 +564,14 @@ class IRCHandler(object):
             npn = num_params_required
         return npn
 
+    def gethostname(self, user):
+        return 'localhost' if user.from_localhost else self.hostname
+
 class IRCUser(object):
     def __init__(self, stream, address, irc_nick=None, username='', realname=None):
         self.stream  = stream
         self.address = address[0]
+        self.from_localhost = True if address[0].split('.')[0] == '127' else False
         self.irc_nick = irc_nick
         self.irc_username = str(username)
         self.irc_realname = realname
