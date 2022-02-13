@@ -6,7 +6,6 @@ import socket
 import string
 import time
 
-import tornado.httpclient
 import tornado.ioloop
 
 # Local modules
@@ -48,7 +47,6 @@ IRC_WHOIS_RX    = re.compile(PREFIX + r'WHOIS( +:| +|\n)(?P<nicks>[^\n ]+|)')
 class IRCHandler(object):
     def __init__(self, settings):
         self.logger     = logging.getLogger()
-        self.ioloop     = tornado.ioloop.IOLoop.current()
         self.hostname   = socket.getfqdn()
         self.conf = settings
         self.users      = {}
