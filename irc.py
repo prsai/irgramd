@@ -58,7 +58,7 @@ class IRCHandler(object):
     async def run(self, stream, address):
         user = IRCUser(stream, address)
 
-        self.logger.debug('Running client connection from %s:%s', address[0], address[1])
+        self.logger.info('Running IRC client connection from %s:%s', address[0], address[1])
 
         while True:
             try:
@@ -67,6 +67,7 @@ class IRCHandler(object):
                 user.stream = None
                 reason = user.close_reason if user.close_reason else ':Client disconnect'
                 await self.send_users_irc(user, 'QUIT', (reason,))
+                self.logger.info('Closing IRC client connection from %s:%s', address[0], address[1])
                 if user in self.users.values():
                     del self.users[user.irc_nick.lower()]
                     user.del_from_channels(self)
