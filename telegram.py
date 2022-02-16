@@ -12,15 +12,6 @@ from include import CHAN_MAX_LENGHT, NICK_MAX_LENGTH
 from irc import IRCUser
 from utils import sanitize_filename, remove_slash, remove_http_s, get_human_size, get_human_duration
 
-# Configuration
-
-# GET API_ID and API_HASH from https://my.telegram.org/apps
-# AND PUT HERE BEFORE RUNNING irgramd
-
-TELEGRAM_API_ID             =
-TELEGRAM_API_HASH           = ''
-
-
     # Telegram
 
 class TelegramHandler(object):
@@ -28,6 +19,8 @@ class TelegramHandler(object):
         self.logger     = logging.getLogger()
         self.config_dir = settings['config_dir']
         self.media_url  = settings['media_url']
+        self.api_id     = settings['api_id']
+        self.api_hash   = settings['api_hash']
         self.media_cn   = 0
         self.irc        = irc
         self.authorized = False
@@ -50,9 +43,7 @@ class TelegramHandler(object):
 
         # Construct Telegram client
         telegram_session     = os.path.join(self.telegram_session_dir, 'telegram')
-        self.telegram_client = telethon.TelegramClient(telegram_session,
-            TELEGRAM_API_ID, TELEGRAM_API_HASH
-        )
+        self.telegram_client = telethon.TelegramClient(telegram_session, self.api_id, self.api_hash)
 
         # Initialize Telegram ID to IRC nick mapping
         self.tid_to_iid = {}
