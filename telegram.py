@@ -3,6 +3,7 @@ import logging
 import os
 import datetime
 import re
+import aioconsole
 import telethon
 from telethon import types as tgty
 
@@ -21,6 +22,7 @@ class TelegramHandler(object):
         self.media_url  = settings['media_url']
         self.api_id     = settings['api_id']
         self.api_hash   = settings['api_hash']
+        self.phone      = settings['phone']
         self.media_cn   = 0
         self.irc        = irc
         self.authorized = False
@@ -60,9 +62,19 @@ class TelegramHandler(object):
         # Start Telegram client
         await self.telegram_client.connect()
 
-        if await self.telegram_client.is_user_authorized():
-            self.authorized = True
-            await self.init_mapping()
+        while not await self.telegram_client.is_user_authorized():
+            self.logger.info('Telegram account not authorized, you must provide the Login code '
+                             'that Telegram will sent you via SMS or another connected client')
+            await self.telegram_client.send_code_request(self.phone)
+            code = await aioconsole.ainput('Login code: ')
+            try:
+                await self.telegram_client.sign_in(code=code)
+            except:
+                pass
+
+        self.logger.info('Telegram account authorized')
+        self.authorized = True
+        await self.init_mapping()
 
     async def init_mapping(self):
         # Update IRC <-> Telegram mapping
