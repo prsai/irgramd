@@ -6,6 +6,7 @@ import re
 # Constants
 
 FILENAME_INVALID_CHARS = re.compile('[/{}<>()"\'\\|&]')
+SIMPLE_URL = re.compile('http(|s)://[^ ]+')
 
 # Utilities
 
@@ -61,6 +62,16 @@ def remove_http_s(url):
     else:
         surl = url
     return remove_slash(surl)
+
+def is_url_equiv(url1, url2):
+    if url1 and url2:
+        return url1 == url2 or remove_slash(remove_http_s(url1)) == remove_slash(remove_http_s(url2))
+    else:
+        return False
+
+def extract_url(text):
+    url = SIMPLE_URL.search(text)
+    return url.group() if url else None
 
 def get_human_size(size):
     human_units = ('', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')

@@ -11,7 +11,7 @@ from telethon import types as tgty
 
 from include import CHAN_MAX_LENGHT, NICK_MAX_LENGTH
 from irc import IRCUser
-from utils import sanitize_filename, remove_slash, remove_http_s, get_human_size, get_human_duration
+from utils import sanitize_filename, is_url_equiv, extract_url, get_human_size, get_human_duration
 
     # Telegram
 
@@ -410,12 +410,10 @@ class TelegramHandler(object):
     async def handle_webpage(self, webpage, message):
         media_type = 'web'
         logo = await self.download_telegram_media(message)
-        if webpage.url != webpage.display_url \
-           and remove_slash(webpage.url) != webpage.display_url \
-           and remove_http_s(webpage.url) != webpage.display_url:
-            media_url_or_data = '{} | {}'.format(webpage.url, webpage.display_url)
+        if is_url_equiv(webpage.url, webpage.display_url):
+            url_data = webpage.url
         else:
-            media_url_or_data = webpage.url
+            url_data = '{} | {}'.format(webpage.url, webpage.display_url)
         if message:
             # sometimes the 1st line of message contains the title, don't repeat it
             message_line = message.message.splitlines()[0]
@@ -423,8 +421,18 @@ class TelegramHandler(object):
                 title = webpage.title
             else:
                 title = ''
+            # extract the URL in the message, don't repeat it
+            message_url = extract_url(message.message)
+            if is_url_equiv(message_url, webpage.url):
+                if is_url_equiv(message_url, webpage.display_url):
+                    media_url_or_data = message.message
+                else:
+                    media_url_or_data = '{} | {}'.format(message.message, webpage.display_url)
+            else:
+                media_url_or_data = '{} | {}'.format(message.message, url_data)
         else:
             title = webpage.title
+            media_url_or_data = url_data
 
         if title and logo:
             caption = ' | {} | {}'.format(title, logo)
