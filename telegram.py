@@ -81,6 +81,7 @@ class TelegramHandler(object):
         tg_user = await self.telegram_client.get_me()
         self.id = tg_user.id
         self.tg_username = self.get_telegram_nick(tg_user)
+        self.set_ircuser_from_telegram(tg_user)
         async for dialog in self.telegram_client.iter_dialogs():
             chat = dialog.entity
             if isinstance(chat, tgty.User):
