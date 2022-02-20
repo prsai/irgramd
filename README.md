@@ -9,6 +9,14 @@ using the [Telethon] library
 
 **[ This is a fork from [pbui/irtelegramd] to resume the development ]**
 
+## License
+
+Copyright (c) 2019 Peter Bui <pbui@bx612.space>
+Copyright (c) 2020-2022 E. Bosch <presidev@AT@gmail.com>
+
+Use of this source code is governed by a MIT style license that
+can be found in the LICENSE file included in this project.
+
 [IRC]: https://en.wikipedia.org/wiki/Internet_Relay_Chat
 [Telegram]: https://telegram.org/
 [python]: https://www.python.org/
