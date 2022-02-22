@@ -21,6 +21,13 @@ from include import CHAN_MAX_LENGHT, NICK_MAX_LENGTH
 from irc import IRCUser
 from utils import sanitize_filename, is_url_equiv, extract_url, get_human_size, get_human_duration
 
+# Test IP table
+
+TEST_IPS = { 1: '149.154.175.10',
+             2: '149.154.167.40',
+             3: '149.154.175.117'
+           }
+
     # Telegram
 
 class TelegramHandler(object):
@@ -31,6 +38,10 @@ class TelegramHandler(object):
         self.api_id     = settings['api_id']
         self.api_hash   = settings['api_hash']
         self.phone      = settings['phone']
+        self.test       = settings['test']
+        self.test_dc    = settings['test_datacenter']
+        self.test_ip    = settings['test_host'] if settings['test_host'] else TEST_IPS[self.test_dc]
+        self.test_port  = settings['test_port']
         self.media_cn   = 0
         self.irc        = irc
         self.authorized = False
@@ -52,8 +63,12 @@ class TelegramHandler(object):
             os.makedirs(self.telegram_session_dir)
 
         # Construct Telegram client
-        telegram_session     = os.path.join(self.telegram_session_dir, 'telegram')
-        self.telegram_client = telethon.TelegramClient(telegram_session, self.api_id, self.api_hash)
+        if self.test:
+            self.telegram_client = telethon.TelegramClient(None, self.api_id, self.api_hash)
+            self.telegram_client.session.set_dc(self.test_dc, self.test_ip, self.test_port)
+        else:
+            telegram_session = os.path.join(self.telegram_session_dir, 'telegram')
+            self.telegram_client = telethon.TelegramClient(telegram_session, self.api_id, self.api_hash)
 
         # Initialize Telegram ID to IRC nick mapping
         self.tid_to_iid = {}
@@ -68,7 +83,10 @@ class TelegramHandler(object):
             self.telegram_client.add_event_handler(handler, event)
 
         # Start Telegram client
-        await self.telegram_client.connect()
+        if self.test:
+            await self.telegram_client.start(self.phone, code_callback=lambda: str(self.test_dc) * 5)
+        else:
+            await self.telegram_client.connect()
 
         while not await self.telegram_client.is_user_authorized():
             self.logger.info('Telegram account not authorized, you must provide the Login code '
