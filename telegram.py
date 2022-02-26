@@ -201,6 +201,8 @@ class TelegramHandler(object):
         return nicks
 
     async def get_telegram_idle(self, irc_nick, tid=None):
+        if self.irc.users[irc_nick].is_service:
+            return None
         tid = self.get_tid(irc_nick, tid)
         user = await self.telegram_client.get_entity(tid)
         if isinstance(user.status,tgty.UserStatusRecently) or \
@@ -219,15 +221,16 @@ class TelegramHandler(object):
         return idle
 
     async def is_bot(self, irc_nick, tid=None):
-        if self.irc.users[irc_nick].stream:
+        user = self.irc.users[irc_nick]
+        if user.stream or user.is_service:
             bot = False
         else:
-            bot = self.irc.users[irc_nick].bot
+            bot = user.bot
         if bot == None:
             tid = self.get_tid(irc_nick, tid)
-            user = await self.telegram_client.get_entity(tid)
-            bot = user.bot
-            self.irc.users[irc_nick].bot = bot
+            tg_user = await self.telegram_client.get_entity(tid)
+            bot = tg_user.bot
+            user.bot = bot
         return bot
 
     async def get_channel_topic(self, channel, entity_cache):

@@ -137,6 +137,9 @@ class IRCHandler(object):
         self.irc_channels_founder = collections.defaultdict(set)
         self.start_time   = time.strftime('%a %d %b %Y %H:%M:%S %z')
 
+        self.service_user = IRCUser(None, ('Services.{}'.format(self.hostname),), self.conf['service_user'],
+                                    'Control', 'Telegram Service', is_service=True)
+        self.users[self.conf['service_user'].lower()] = self.service_user
 
     async def send_irc_command(self, user, command):
         self.logger.debug('Send IRC Command: %s', command)
@@ -351,10 +354,12 @@ class IRCHandler(object):
                                )))
                 if await self.tg.is_bot(ni):
                     await self.reply_code(user, 'RPL_WHOISBOT', (real_ni,))
-                elif usr.tls or not usr.stream:
+                elif usr.tls or (not usr.stream and not usr.is_service):
                     proto = 'TLS' if usr.tls else 'MTProto'
                     server = self.gethostname(user) if usr.stream else 'Telegram'
                     await self.reply_code(user, 'RPL_WHOISSECURE', (real_ni, proto, server))
+                if usr.is_service:
+                    await self.reply_code(user, 'RPL_WHOISSERVICE', (real_ni,))
                 await self.reply_code(user, 'RPL_ENDOFWHOIS', (real_ni,))
             else:
                 await self.reply_code(user, 'ERR_NOSUCHNICK', (nick,))
@@ -373,6 +378,9 @@ class IRCHandler(object):
         self.logger.debug('Handling PRIVMSG: %s, %s', target, message)
 
         tgl = target.lower()
+        if self.service_user.irc_nick.lower() == tgl:
+            # TODO: handle serivce command
+            return
         # Echo channel messages from IRC to other IRC connections
         # because they won't receive event from Telegram
         if tgl in self.irc_channels.keys():
@@ -575,7 +583,7 @@ class IRCHandler(object):
         return 'localhost' if user.from_localhost else self.hostname
 
 class IRCUser(object):
-    def __init__(self, stream, address, irc_nick=None, username='', realname=None):
+    def __init__(self, stream, address, irc_nick=None, username='', realname=None, is_service=False):
         self.stream  = stream
         self.address = address[0]
         self.from_localhost = True if address[0].split('.')[0] == '127' else False
@@ -588,6 +596,7 @@ class IRCUser(object):
         self.oper = False
         self.tls = False
         self.bot = None
+        self.is_service = is_service
         self.close_reason = ''
 
     def get_irc_mask(self):

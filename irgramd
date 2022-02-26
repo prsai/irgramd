@@ -78,6 +78,7 @@ if __name__ == '__main__':
     tornado.options.define('pam_group', default=None, metavar='GROUP', help='Unix group allowed if `pam` enabled, if empty any user is allowed')
     tornado.options.define('phone', default=None, metavar='PHONE_NUMBER', help='Phone number associated with the Telegram account to receive the authorization codes if necessary')
     tornado.options.define('port', default=None, metavar='PORT', help='Port to listen on for IRC. (default 6667, default with TLS 6697)')
+    tornado.options.define('service_user', default='TelegramServ', metavar='SERVICE_NICK', help='Nick of the service/control user, must be a nick not used by a real Telegram user')
     tornado.options.define('test', default=False, help='Connect to Telegram test environment')
     tornado.options.define('test_datacenter', default=2, metavar='DATACENTER_NUMBER', help='Datacenter to connect to Telegram test environment')
     tornado.options.define('test_host', default=None, metavar='HOST_IP', help='Host to connect to Telegram test environment (default: use a internal table depending on datacenter)')
