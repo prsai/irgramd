@@ -338,9 +338,9 @@ class IRCHandler(object):
         self.logger.debug('Handling WHOIS: %s', nicks)
         for nick in nicks.split(','):
             ni = nick.lower()
-            real_ni = self.users[ni].irc_nick
             if ni in self.users.keys():
                 usr = self.users[ni]
+                real_ni = usr.irc_nick
                 await self.reply_code(user, 'RPL_WHOISUSER', (real_ni, usr.irc_username, usr.address, usr.irc_realname))
                 await self.reply_code(user, 'RPL_WHOISSERVER', (real_ni, self.gethostname(user)))
                 chans = usr.get_channels(self)
