@@ -111,25 +111,26 @@ class IRCHandler(object):
     # IRC
 
     def initialize_irc(self):
-        self.irc_handlers = (
+        self.irc_handlers = \
+        (
             # pattern              handle           register_required   num_params_required
-            (IRC_JOIN_RX,     self.handle_irc_join,     True,             ALL_PARAMS),
-            (IRC_LIST_RX,     self.handle_irc_list,     True,             0),
-            (IRC_MODE_RX,     self.handle_irc_mode,     True,             1),
-            (IRC_MOTD_RX,     self.handle_irc_motd,     True,             0),
-            (IRC_NAMES_RX,    self.handle_irc_names,    True,             ALL_PARAMS),
-            (IRC_NICK_RX,     self.handle_irc_nick,     False,            ALL_PARAMS),
-            (IRC_PART_RX,     self.handle_irc_part,     True,             1),
-            (IRC_PASS_RX,     self.handle_irc_pass,     False,            ALL_PARAMS),
-            (IRC_PING_RX,     self.handle_irc_ping,     True,             ALL_PARAMS),
             (IRC_PRIVMSG_RX,  self.handle_irc_privmsg,  True,             ALL_PARAMS),
-            (IRC_QUIT_RX,     self.handle_irc_quit,     False,            0),
+            (IRC_PING_RX,     self.handle_irc_ping,     True,             ALL_PARAMS),
+            (IRC_JOIN_RX,     self.handle_irc_join,     True,             ALL_PARAMS),
+            (IRC_MODE_RX,     self.handle_irc_mode,     True,             1),
+            (IRC_NAMES_RX,    self.handle_irc_names,    True,             ALL_PARAMS),
             (IRC_TOPIC_RX,    self.handle_irc_topic,    True,             ALL_PARAMS),
-            (IRC_USER_RX,     self.handle_irc_user,     False,            ALL_PARAMS),
             (IRC_USERHOST_RX, self.handle_irc_userhost, True,             1),
-            (IRC_VERSION_RX,  self.handle_irc_version,  True,             0),
+            (IRC_PART_RX,     self.handle_irc_part,     True,             1),
             (IRC_WHO_RX,      self.handle_irc_who,      True,             ALL_PARAMS),
             (IRC_WHOIS_RX,    self.handle_irc_whois,    True,             ALL_PARAMS),
+            (IRC_LIST_RX,     self.handle_irc_list,     True,             0),
+            (IRC_NICK_RX,     self.handle_irc_nick,     False,            ALL_PARAMS),
+            (IRC_MOTD_RX,     self.handle_irc_motd,     True,             0),
+            (IRC_USER_RX,     self.handle_irc_user,     False,            ALL_PARAMS),
+            (IRC_QUIT_RX,     self.handle_irc_quit,     False,            0),
+            (IRC_VERSION_RX,  self.handle_irc_version,  True,             0),
+            (IRC_PASS_RX,     self.handle_irc_pass,     False,            ALL_PARAMS),
         )
         self.iid_to_tid   = {}
         self.irc_channels = collections.defaultdict(set)
