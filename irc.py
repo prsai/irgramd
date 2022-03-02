@@ -21,6 +21,7 @@ import tornado.ioloop
 from include import VERSION, CHAN_MAX_LENGHT, NICK_MAX_LENGTH
 from irc_replies import irc_codes
 from utils import chunks, set_replace, split_lines
+from service import service
 
 # Constants
 
@@ -141,6 +142,7 @@ class IRCHandler(object):
         self.service_user = IRCUser(None, ('Services.{}'.format(self.hostname),), self.conf['service_user'],
                                     'Control', 'Telegram Service', is_service=True)
         self.users[self.conf['service_user'].lower()] = self.service_user
+        self.service = service()
 
     async def send_irc_command(self, user, command):
         self.logger.debug('Send IRC Command: %s', command)
@@ -380,7 +382,8 @@ class IRCHandler(object):
 
         tgl = target.lower()
         if self.service_user.irc_nick.lower() == tgl:
-            # TODO: handle serivce command
+            reply = self.service.parse_command(message)
+            await self.send_msg(self.service_user, user.irc_nick, reply)
             return
         # Echo channel messages from IRC to other IRC connections
         # because they won't receive event from Telegram
