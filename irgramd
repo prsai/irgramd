@@ -26,7 +26,7 @@ from telegram import TelegramHandler
 class IRCTelegramd(tornado.tcpserver.TCPServer):
     def __init__(self, logger, settings):
         self.logger     = logger
-        effective_port  = settings['port']
+        effective_port  = settings['irc_port']
 
         if settings['tls']:
             if not settings['tls_cert']: # error
@@ -44,7 +44,7 @@ class IRCTelegramd(tornado.tcpserver.TCPServer):
 
         tornado.tcpserver.TCPServer.__init__(self, ssl_options=tls_context)
 
-        self.address    = settings['address'] or '127.0.0.1'
+        self.address    = settings['irc_address']
         self.port       = effective_port
         self.irc_handler = None
         self.tg_handler  = None
@@ -66,18 +66,18 @@ class IRCTelegramd(tornado.tcpserver.TCPServer):
 
 if __name__ == '__main__':
     logger = logging.getLogger()
-    tornado.options.define('address', default=None, metavar='ADDRESS', help='Address to listen on.')
     tornado.options.define('api_hash', default=None, metavar='HASH', help='Telegram API Hash for your account (obtained from https://my.telegram.org/apps)')
     tornado.options.define('api_id', type=int, default=None, metavar='ID', help='Telegram API ID for your account (obtained from https://my.telegram.org/apps)')
     tornado.options.define('config', default='irgramdrc', metavar='CONFIGFILE', help='Config file absolute or relative to `config_dir` (command line options override it)')
     tornado.options.define('config_dir', default='~/.config/irgramd', metavar='PATH', help='Configuration directory where telegram session info is saved')
+    tornado.options.define('irc_address', default='127.0.0.1', metavar='ADDRESS', help='Address to listen on for IRC')
     tornado.options.define('irc_nicks', type=str, multiple=True, metavar='nick,..', help='List of nicks allowed for IRC, if `pam` and optionally `pam_group` are set, PAM authentication will be used instead')
     tornado.options.define('irc_password', default='', metavar='PASSWORD', help='Password for IRC authentication, if `pam` is set, PAM authentication will be used instead')
+    tornado.options.define('irc_port', type=int, default=None, metavar='PORT', help='Port to listen on for IRC. (default 6667, default with TLS 6697)')
     tornado.options.define('media_url', default=None, metavar='BASE_URL', help='Base URL for media files, should be configured in the external (to irgramd) webserver')
     tornado.options.define('pam', default=False, help='Use PAM for IRC authentication, if not set you should set `irc_password`')
     tornado.options.define('pam_group', default=None, metavar='GROUP', help='Unix group allowed if `pam` enabled, if empty any user is allowed')
     tornado.options.define('phone', default=None, metavar='PHONE_NUMBER', help='Phone number associated with the Telegram account to receive the authorization codes if necessary')
-    tornado.options.define('port', default=None, metavar='PORT', help='Port to listen on for IRC. (default 6667, default with TLS 6697)')
     tornado.options.define('service_user', default='TelegramServ', metavar='SERVICE_NICK', help='Nick of the service/control user, must be a nick not used by a real Telegram user')
     tornado.options.define('test', default=False, help='Connect to Telegram test environment')
     tornado.options.define('test_datacenter', default=2, metavar='DATACENTER_NUMBER', help='Datacenter to connect to Telegram test environment')
