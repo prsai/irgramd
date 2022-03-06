@@ -383,7 +383,8 @@ class IRCHandler(object):
         tgl = target.lower()
         if self.service_user.irc_nick.lower() == tgl:
             reply = self.service.parse_command(message)
-            await self.send_msg(self.service_user, user.irc_nick, reply)
+            for reply_line in reply:
+                await self.send_msg(self.service_user, user.irc_nick, reply_line)
             return
         # Echo channel messages from IRC to other IRC connections
         # because they won't receive event from Telegram
