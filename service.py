@@ -34,7 +34,9 @@ class service:
         start_help = ('*** Telegram Service Help ***',)
         end_help = ('*** End of Help ***',)
 
-        if not help_command or help_command == 'help':
+        if help == HELP.brief:
+            help_text = ('   help      This help',)
+        elif not help_command or help_command == 'help':
             help_text = start_help
             help_text += \
             (
@@ -43,7 +45,6 @@ class service:
             )
             for command in self.commands.values():
                 handler = command[0]
-                if handler == self.handle_command_help: break
                 help_text += handler(help=HELP.brief)
             help_text += \
             (
