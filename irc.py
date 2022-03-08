@@ -183,8 +183,7 @@ class IRCHandler(object):
             user.irc_nick = nick
             self.users[ni] = user
             if not user.registered and user.irc_username:
-                user.registered = True
-                await self.send_greeting(user)
+                await self.register(user)
         else:
             if user.registered:
                 await self.reply_code(user, 'ERR_ERRONEUSNICKNAME', (nick,))
@@ -214,8 +213,7 @@ class IRCHandler(object):
         user.irc_username = username
         user.irc_realname = realname
         if user.irc_nick:
-            user.registered = True
-            await self.send_greeting(user)
+            await self.register(user)
 
     async def handle_irc_join(self, user, channels):
         self.logger.debug('Handling JOIN: %s', channels)
@@ -413,6 +411,10 @@ class IRCHandler(object):
         user.stream.close()
 
     # IRC functions
+    async def register(self, user):
+        user.registered = True
+        await self.send_greeting(user)
+        await self.send_help(user)
 
     async def send_msg(self, source, target, message):
         messages = split_lines(message)
@@ -492,6 +494,14 @@ class IRCHandler(object):
 
     async def send_isupport(self, user):
         await self.reply_code(user, 'RPL_ISUPPORT', (CHAN_MAX_LENGHT, NICK_MAX_LENGTH))
+
+    async def send_help(self, user):
+        for line in (
+                      'Welcome to irgramd service',
+                      'use /msg {} help'.format(self.service_user.irc_nick),
+                      'to get help',
+                    ):
+            await self.send_msg(self.service_user, user.irc_nick, line)
 
     async def send_users_irc(self, prfx, command, params):
         for usr in [x for x in self.users.values() if x.stream]:
