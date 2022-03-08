@@ -68,6 +68,7 @@ if __name__ == '__main__':
     logger = logging.getLogger()
     tornado.options.define('api_hash', default=None, metavar='HASH', help='Telegram API Hash for your account (obtained from https://my.telegram.org/apps)')
     tornado.options.define('api_id', type=int, default=None, metavar='ID', help='Telegram API ID for your account (obtained from https://my.telegram.org/apps)')
+    tornado.options.define('ask_code', default=False, help='Ask authentication code (sent by Telegram) in console instead of "code" service command in IRC')
     tornado.options.define('config', default='irgramdrc', metavar='CONFIGFILE', help='Config file absolute or relative to `config_dir` (command line options override it)')
     tornado.options.define('config_dir', default='~/.config/irgramd', metavar='PATH', help='Configuration directory where telegram session info is saved')
     tornado.options.define('irc_address', default='127.0.0.1', metavar='ADDRESS', help='Address to listen on for IRC')

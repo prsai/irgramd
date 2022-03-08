@@ -42,6 +42,7 @@ class TelegramHandler(object):
         self.test_dc    = settings['test_datacenter']
         self.test_ip    = settings['test_host'] if settings['test_host'] else TEST_IPS[self.test_dc]
         self.test_port  = settings['test_port']
+        self.ask_code   = settings['ask_code']
         self.media_cn   = 0
         self.irc        = irc
         self.authorized = False
@@ -89,15 +90,21 @@ class TelegramHandler(object):
             await self.telegram_client.connect()
 
         while not await self.telegram_client.is_user_authorized():
-            self.logger.info('Telegram account not authorized, you must provide the Login code '
-                             'that Telegram will sent you via SMS or another connected client')
+            self.logger.info('Telegram account not authorized')
             await self.telegram_client.send_code_request(self.phone)
+            if not self.ask_code:
+                return
+            self.logger.info('You must provide the Login code that Telegram will '
+                             'sent you via SMS or another connected client')
             code = await aioconsole.ainput('Login code: ')
             try:
                 await self.telegram_client.sign_in(code=code)
             except:
                 pass
 
+        await self.continue_auth()
+
+    async def continue_auth(self):
         self.logger.info('Telegram account authorized')
         self.authorized = True
         await self.init_mapping()

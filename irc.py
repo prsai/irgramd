@@ -108,6 +108,7 @@ class IRCHandler(object):
 
     def set_telegram(self, tg):
         self.tg = tg
+        self.service = service(self.conf, self.tg)
 
     # IRC
 
@@ -142,7 +143,6 @@ class IRCHandler(object):
         self.service_user = IRCUser(None, ('Services.{}'.format(self.hostname),), self.conf['service_user'],
                                     'Control', 'Telegram Service', is_service=True)
         self.users[self.conf['service_user'].lower()] = self.service_user
-        self.service = service()
 
     async def send_irc_command(self, user, command):
         self.logger.debug('Send IRC Command: %s', command)
@@ -380,7 +380,7 @@ class IRCHandler(object):
 
         tgl = target.lower()
         if self.service_user.irc_nick.lower() == tgl:
-            reply = self.service.parse_command(message)
+            reply = await self.service.parse_command(message)
             for reply_line in reply:
                 await self.send_msg(self.service_user, user.irc_nick, reply_line)
             return
@@ -415,6 +415,7 @@ class IRCHandler(object):
         user.registered = True
         await self.send_greeting(user)
         await self.send_help(user)
+        await self.check_telegram_auth(user)
 
     async def send_msg(self, source, target, message):
         messages = split_lines(message)
@@ -502,6 +503,18 @@ class IRCHandler(object):
                       'to get help',
                     ):
             await self.send_msg(self.service_user, user.irc_nick, line)
+
+    async def check_telegram_auth(self, user):
+        if not self.tg.authorized and not self.tg.ask_code:
+            for line in (
+                          '----',
+                          'Your Telegram account is not authorized yet,',
+                          'you must supply the code that Telegram sent to your phone',
+                          'or another client that is currently connected',
+                          'use /msg {} code <code>'.format(self.service_user.irc_nick),
+                          'e.g. /msg {} code 12345'.format(self.service_user.irc_nick),
+                        ):
+                await self.send_msg(self.service_user, user.irc_nick, line)
 
     async def send_users_irc(self, prfx, command, params):
         for usr in [x for x in self.users.values() if x.stream]:
