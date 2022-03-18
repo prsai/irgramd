@@ -382,7 +382,7 @@ class IRCHandler(object):
         if self.service_user.irc_nick.lower() == tgl:
             reply = await self.service.parse_command(message)
             for reply_line in reply:
-                await self.send_msg(self.service_user, user.irc_nick, reply_line)
+                await self.send_msg(self.service_user, None, reply_line, user)
             return
         # Echo channel messages from IRC to other IRC connections
         # because they won't receive event from Telegram
@@ -417,14 +417,16 @@ class IRCHandler(object):
         await self.send_help(user)
         await self.check_telegram_auth(user)
 
-    async def send_msg(self, source, target, message):
+    async def send_msg(self, source, target, message, selfuser=None):
         messages = split_lines(message)
         tgt = target.lower() if target else ''
         is_chan = tgt in self.irc_channels.keys()
         # source None (False): it's self Telegram user, see [1]
         source_mask = source.get_irc_mask() if source else ''
         for msg in messages:
-            if is_chan:
+            if selfuser:
+                irc_users = (selfuser,)
+            elif is_chan:
                 irc_users = (u for u in self.users.values() if u.stream and u.irc_nick in self.irc_channels[tgt])
             else:
                 irc_users = (u for u in self.users.values() if u.stream)
@@ -502,7 +504,7 @@ class IRCHandler(object):
                       'use /msg {} help'.format(self.service_user.irc_nick),
                       'to get help',
                     ):
-            await self.send_msg(self.service_user, user.irc_nick, line)
+            await self.send_msg(self.service_user, None, line, user)
 
     async def check_telegram_auth(self, user):
         if not self.tg.authorized and not self.tg.ask_code:
