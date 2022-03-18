@@ -82,7 +82,7 @@ class IRCHandler(object):
                     user.del_from_channels(self)
                 del user
                 break
-            message = message.decode().replace('\r','\n')
+            message = message.decode(self.conf['char_encoding'], errors='replace').replace('\r','\n')
             self.logger.debug(message)
 
             for pattern, handler, register_required, num_params_required in self.irc_handlers:
@@ -147,7 +147,7 @@ class IRCHandler(object):
     async def send_irc_command(self, user, command):
         self.logger.debug('Send IRC Command: %s', command)
         command = command + '\r\n'
-        user.stream.write(command.encode())
+        user.stream.write(command.encode(self.conf['char_encoding'], errors='replace'))
 
     # IRC handlers
 
