@@ -507,6 +507,7 @@ class IRCHandler(object):
             await self.send_msg(self.service_user, None, line, user)
 
     async def check_telegram_auth(self, user):
+        await self.tg.auth_checked.wait()
         if not self.tg.authorized and not self.tg.ask_code:
             for line in (
                           '----',

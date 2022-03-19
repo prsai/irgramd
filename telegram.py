@@ -12,6 +12,7 @@ import os
 import datetime
 import re
 import aioconsole
+import asyncio
 import telethon
 from telethon import types as tgty
 
@@ -51,6 +52,8 @@ class TelegramHandler(object):
         self.channels_date = {}
         self.mid = mesg_id('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%+./_~')
         self.webpending = {}
+        # Set event to be waited by irc.check_telegram_auth()
+        self.auth_checked = asyncio.Event()
 
     async def initialize_telegram(self):
         # Setup media folder
@@ -92,6 +95,7 @@ class TelegramHandler(object):
         while not await self.telegram_client.is_user_authorized():
             self.logger.info('Telegram account not authorized')
             await self.telegram_client.send_code_request(self.phone)
+            self.auth_checked.set()
             if not self.ask_code:
                 return
             self.logger.info('You must provide the Login code that Telegram will '
@@ -107,6 +111,7 @@ class TelegramHandler(object):
     async def continue_auth(self):
         self.logger.info('Telegram account authorized')
         self.authorized = True
+        self.auth_checked.set()
         await self.init_mapping()
 
     async def init_mapping(self):
