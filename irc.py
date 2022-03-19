@@ -140,7 +140,7 @@ class IRCHandler(object):
         self.irc_channels_founder = collections.defaultdict(set)
         self.start_time   = time.strftime('%a %d %b %Y %H:%M:%S %z')
 
-        self.service_user = IRCUser(None, ('Services.{}'.format(self.hostname),), self.conf['service_user'],
+        self.service_user = IRCUser(None, ('Services',), self.conf['service_user'],
                                     'Control', 'Telegram Service', is_service=True)
         self.users[self.conf['service_user'].lower()] = self.service_user
 
