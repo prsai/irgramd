@@ -10,6 +10,7 @@
 import itertools
 import textwrap
 import re
+import datetime
 
 # Constants
 
@@ -108,3 +109,15 @@ def get_human_duration(duration):
     if m > 0: res += str(m) + 'm'
     if s > 0: res += str(s) + 's'
     return res
+
+def compact_date(date):
+    delta = datetime.datetime.now(datetime.timezone.utc) - date
+
+    if delta.days < 1:
+        compact_date = date.strftime('%H:%M')
+    elif delta.days < 366:
+        compact_date = date.strftime('%d-%b')
+    else:
+        compact_date = date.strftime('%Y')
+
+    return compact_date

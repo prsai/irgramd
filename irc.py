@@ -380,7 +380,7 @@ class IRCHandler(object):
 
         tgl = target.lower()
         if self.service_user.irc_nick.lower() == tgl:
-            reply = await self.service.parse_command(message)
+            reply = await self.service.parse_command(message, user.irc_nick)
             for reply_line in reply:
                 await self.send_msg(self.service_user, None, reply_line, user)
             return
