@@ -579,7 +579,10 @@ class IRCHandler(object):
         chan = channel.lower()
         topic = await self.tg.get_channel_topic(chan, entity_cache)
         timestamp = await self.tg.get_channel_creation(chan, entity_cache)
-        founder = list(self.irc_channels_founder[chan])[0]
+        if self.irc_channels_founder[chan]:
+            founder = list(self.irc_channels_founder[chan])[0]
+        else:
+            founder = self.service_user.irc_nick
         await self.reply_code(user, 'RPL_TOPIC', (channel, topic))
         await self.reply_code(user, 'RPL_TOPICWHOTIME', (channel, founder, timestamp))
 
