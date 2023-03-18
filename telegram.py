@@ -145,6 +145,7 @@ class TelegramHandler(object):
         self.tid_to_iid[chat.id] = channel
         chan = channel.lower()
         self.irc.iid_to_tid[chan] = chat.id
+        self.irc.irc_channels[chan] = set()
         # Add users from the channel
         async for user in self.telegram_client.iter_participants(chat.id):
             user_nick = self.set_ircuser_from_telegram(user)
