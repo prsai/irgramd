@@ -7,6 +7,7 @@
 # can be found in the LICENSE file included in this project.
 
 from utils import compact_date
+from telethon import utils as tgutils
 
 class service:
     def __init__(self, settings, telegram):
@@ -79,7 +80,7 @@ class service:
                       'Id', 'Unread', 'Mentions', 'Type', 'Pin', 'Arch', 'Last', 'Name'),
                 )
                 async for dialog in self.tg.telegram_client.iter_dialogs():
-                    id = dialog.id
+                    id, type = tgutils.resolve_id(dialog.id)
                     unr = dialog.unread_count
                     men = dialog.unread_mentions_count
                     ty = 'User' if dialog.is_user else 'Chat' if dialog.is_group else 'Chan'
