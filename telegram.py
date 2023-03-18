@@ -177,7 +177,10 @@ class TelegramHandler(object):
         return self.get_telegram_display_name(tg_user)
 
     def get_telegram_channel(self, chat):
-        return '#' + chat.title.replace(' ', '-').replace(',', '-')
+        chan = '#' + chat.title.replace(' ', '-').replace(',', '-')
+        while chan.lower() in self.irc.iid_to_tid:
+            chan += '_'
+        return chan
 
     def get_irc_user_from_telegram(self, tid):
         nick = self.tid_to_iid[tid]
