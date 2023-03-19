@@ -110,5 +110,6 @@ if __name__ == '__main__':
     options['config_dir'] = config_dir
 
     irc_server = IRCTelegramd(logger, options)
-    asyncio.get_event_loop().run_until_complete(irc_server.run(options))
-    asyncio.get_event_loop().run_forever()
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(irc_server.run(options))
+    loop.run_forever()
