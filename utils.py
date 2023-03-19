@@ -115,7 +115,7 @@ def compact_date(date):
 
     if delta.days < 1:
         compact_date = date.strftime('%H:%M')
-    elif delta.days < 366:
+    elif delta.days < 365:
         compact_date = date.strftime('%d-%b')
     else:
         compact_date = date.strftime('%Y')
