@@ -14,7 +14,7 @@ import re
 import aioconsole
 import asyncio
 import telethon
-from telethon import types as tgty
+from telethon import types as tgty, utils as tgutils
 
 # Local modules
 
@@ -197,13 +197,14 @@ class TelegramHandler(object):
         return self.tid_to_iid[tid]
 
     async def get_irc_channel_from_telegram_id(self, tid, entity=None):
-        if tid not in self.tid_to_iid:
+        rtid, type = tgutils.resolve_id(tid)
+        if rtid not in self.tid_to_iid:
             chat    = entity or await self.telegram_client.get_entity(tid)
             channel = self.get_telegram_channel(chat)
-            self.tid_to_iid[tid]     = channel
-            self.irc.iid_to_tid[channel] = tid
+            self.tid_to_iid[rtid]     = channel
+            self.irc.iid_to_tid[channel] = rtid
 
-        return self.tid_to_iid[tid]
+        return self.tid_to_iid[rtid]
 
     async def get_telegram_channel_participants(self, tid):
         channel = self.tid_to_iid[tid]
