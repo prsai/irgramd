@@ -350,7 +350,7 @@ class TelegramHandler(object):
                 irc_nick = await self.get_irc_nick_from_telegram_id(event.action_message.sender_id)
 
         if event.user_added or event.user_joined:
-            await self.irc.join_irc_channel(irc_nick, irc_channel, False)
+            await self.irc.join_irc_channel(irc_nick, irc_channel, full_join=False)
         elif event.user_kicked or event.user_left:
             await self.irc.part_irc_channel(irc_nick, irc_channel)
 
@@ -361,7 +361,7 @@ class TelegramHandler(object):
                 channel = self.get_telegram_channel(chat)
                 self.tid_to_iid[chat.id] = channel
                 self.irc.iid_to_tid[channel] = chat.id
-                await self.irc.join_irc_channel(self.irc.irc_nick, channel, True)
+                await self.irc.join_irc_channel(self.irc.irc_nick, channel, full_join=True)
 
     async def handle_telegram_media(self, event):
         message = event.message

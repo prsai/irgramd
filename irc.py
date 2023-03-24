@@ -225,7 +225,7 @@ class IRCHandler(object):
         else:
             for channel in channels.split(','):
                 if channel.lower() in self.irc_channels.keys():
-                    await self.join_irc_channel(user, channel, True)
+                    await self.join_irc_channel(user, channel, full_join=True)
                 else:
                     await self.reply_code(user, 'ERR_NOSUCHCHANNEL', (channel,))
 
@@ -540,7 +540,7 @@ class IRCHandler(object):
         else:
             await self.reply_code(user, 'RPL_CHANNELMODEIS', (channel, modes,''))
 
-    async def join_irc_channel(self, user, channel, full_join=False):
+    async def join_irc_channel(self, user, channel, full_join):
         entity_cache = [None]
         chan = channel.lower()
         real_chan = self.get_realcaps_name(chan)
