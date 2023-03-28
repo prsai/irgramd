@@ -451,6 +451,8 @@ class IRCHandler(object):
         src_mask = source_mask if source_mask else user.get_irc_mask()
         # target None (False): it's private, not a channel
         tgt = target if target else user.irc_nick
+        if self.tg.refwd_me:
+             msg = msg.format(user.irc_nick)
         await self.send_irc_command(user, ':{} PRIVMSG {} :{}'.format(src_mask, tgt, msg))
 
     async def reply_command(self, user, prfx, comm, params):

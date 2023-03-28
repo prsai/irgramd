@@ -52,6 +52,7 @@ class TelegramHandler(object):
         self.channels_date = {}
         self.mid = mesg_id('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%+./_~')
         self.webpending = {}
+        self.refwd_me = False
         # Set event to be waited by irc.check_telegram_auth()
         self.auth_checked = asyncio.Event()
 
@@ -311,12 +312,21 @@ class TelegramHandler(object):
         else:
             text = event.message.message
 
-        message = '[{}] {}'.format(mid, text)
+        if event.message.is_reply:
+            refwd_text = await self.handle_telegram_reply(event)
+        elif event.message.forward:
+            refwd_text = await self.handle_telegram_forward(event)
+        else:
+            refwd_text = ''
+
+        message = '[{}] {}{}'.format(mid, refwd_text, text)
 
         if event.message.is_private:
             await self.handle_telegram_private_message(user, message)
         else:
             await self.handle_telegram_channel_message(event, user, message)
+
+        self.refwd_me = False
 
     async def handle_telegram_private_message(self, user, message):
         self.logger.debug('Handling Telegram Private Message: %s, %s', user, message)
@@ -362,6 +372,45 @@ class TelegramHandler(object):
                 self.tid_to_iid[chat.id] = channel
                 self.irc.iid_to_tid[channel] = chat.id
                 await self.irc.join_irc_channel(self.irc.irc_nick, channel, full_join=True)
+
+    async def handle_telegram_reply(self, event):
+        trunc = ''
+        replied = await event.message.get_reply_message()
+        message = replied.message
+        if not message:
+            message = '[{}]'.format(self.mid.num_to_id(replied.id - self.mid.mesg_base))
+        elif len(message) > 30:
+            message = message[:30]
+            trunc = '...'
+        replied_user = self.get_irc_user_from_telegram(replied.sender_id)
+        if replied_user is None:
+            replied_nick = '{}'
+            self.refwd_me = True
+        else:
+            replied_nick = replied_user.irc_nick
+
+        return '|Re {}: {}{}| '.format(replied_nick, message, trunc)
+
+    async def handle_telegram_forward(self, event):        
+        forwarded_user = self.get_irc_user_from_telegram(event.forward.from_id.user_id)
+        if forwarded_user is None:
+            forwarded_nick = '{}'
+            self.refwd_me = True
+        else:
+            forwarded_nick = forwarded_user.irc_nick
+        forwarded_peer = event.forward.saved_from_peer
+        if isinstance(forwarded_peer, tgty.PeerChannel):
+            dest = ' ' + await self.get_irc_channel_from_telegram_id(forwarded_peer.channel_id)
+        elif isinstance(forwarded_peer, tgty.PeerChat):
+            dest = ' ' + await self.get_irc_channel_from_telegram_id(forwarded_peer.chat_id)
+        else:
+            # if it's from me I want to know who was the destination of a message (user)
+            if self.refwd_me:
+               dest = ' ' + self.get_irc_user_from_telegram(forwarded_peer.user_id).irc_nick
+            else:
+               dest = ''
+
+        return '|Fwd {}{}| '.format(forwarded_nick, dest)
 
     async def handle_telegram_media(self, event):
         message = event.message
