@@ -1,7 +1,7 @@
 # irgramd: IRC-Telegram gateway
 # service.py: IRC service/control command handlers
 #
-# Copyright (c) 2022 E. Bosch <presidev@AT@gmail.com>
+# Copyright (c) 2022,2023 E. Bosch <presidev@AT@gmail.com>
 #
 # Use of this source code is governed by a MIT style license that
 # can be found in the LICENSE file included in this project.
