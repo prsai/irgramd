@@ -44,6 +44,7 @@ class TelegramHandler(object):
         self.test_ip    = settings['test_host'] if settings['test_host'] else TEST_IPS[self.test_dc]
         self.test_port  = settings['test_port']
         self.ask_code   = settings['ask_code']
+        self.reply_len  = settings['reply_length']
         self.media_cn   = 0
         self.irc        = irc
         self.authorized = False
@@ -379,8 +380,8 @@ class TelegramHandler(object):
         message = replied.message
         if not message:
             message = '[{}]'.format(self.mid.num_to_id(replied.id - self.mid.mesg_base))
-        elif len(message) > 30:
-            message = message[:30]
+        elif len(message) > self.reply_len:
+            message = message[:self.reply_len]
             trunc = '...'
         replied_user = self.get_irc_user_from_telegram(replied.sender_id)
         if replied_user is None:
