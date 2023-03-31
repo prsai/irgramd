@@ -292,6 +292,8 @@ class TelegramHandler(object):
         return type(entity).__name__
 
     async def handle_raw(self, update):
+        self.logger.debug('Handling Telegram Raw Event: %s', update)
+
         if isinstance(update, tgty.UpdateWebPage) and isinstance(update.webpage, tgty.WebPage):
             event = self.webpending.pop(update.webpage.id, None)
             if event:
