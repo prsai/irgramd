@@ -337,21 +337,21 @@ class TelegramHandler(object):
         message = '[{}] {}{}'.format(mid, refwd_text, text)
 
         if event.message.is_private:
-            await self.handle_telegram_private_message(user, message)
+            await self.relay_telegram_private_message(user, message)
             chan = None
         else:
-            chan = await self.handle_telegram_channel_message(event, user, message)
+            chan = await self.relay_telegram_channel_message(event, user, message)
 
         self.add_to_cache(event.message.id, mid, message, user, chan)
 
         self.refwd_me = False
 
-    async def handle_telegram_private_message(self, user, message):
+    async def relay_telegram_private_message(self, user, message):
         self.logger.debug('Handling Telegram Private Message: %s, %s', user, message)
 
         await self.irc.send_msg(user, None, message)
 
-    async def handle_telegram_channel_message(self, event, user, message):
+    async def relay_telegram_channel_message(self, event, user, message):
         self.logger.debug('Handling Telegram Channel Message: %s', event)
 
         entity  = await event.message.get_chat()
