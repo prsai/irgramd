@@ -336,28 +336,36 @@ class TelegramHandler(object):
 
         message = '[{}] {}{}'.format(mid, refwd_text, text)
 
-        if event.message.is_private:
-            await self.relay_telegram_private_message(user, message)
-            chan = None
-        else:
-            chan = await self.relay_telegram_channel_message(event, user, message)
+        chan = await self.relay_telegram_message(event, user, message)
 
         self.add_to_cache(event.message.id, mid, message, user, chan)
 
         self.refwd_me = False
+
+    async def relay_telegram_message(self, event, user, message, channel=None):
+        private = (event and event.message.is_private) or (not event and not channel)
+        if private:
+            await self.relay_telegram_private_message(user, message)
+            chan = None
+        else:
+            chan = await self.relay_telegram_channel_message(event, user, message, channel)
+        return chan
 
     async def relay_telegram_private_message(self, user, message):
         self.logger.debug('Handling Telegram Private Message: %s, %s', user, message)
 
         await self.irc.send_msg(user, None, message)
 
-    async def relay_telegram_channel_message(self, event, user, message):
+    async def relay_telegram_channel_message(self, event, user, message, channel=None):
         self.logger.debug('Handling Telegram Channel Message: %s', event)
 
-        entity  = await event.message.get_chat()
-        channel = await self.get_irc_channel_from_telegram_id(event.message.chat_id, entity)
-        await self.irc.send_msg(user, channel, message)
-        return channel
+        if event:
+            entity = await event.message.get_chat()
+            chan = await self.get_irc_channel_from_telegram_id(event.message.chat_id, entity)
+        else:
+            chan = channel
+        await self.irc.send_msg(user, chan, message)
+        return chan
 
     async def handle_telegram_chat_action(self, event):
         self.logger.debug('Handling Telegram Chat Action: %s', event)
