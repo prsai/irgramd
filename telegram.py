@@ -13,6 +13,7 @@ import datetime
 import re
 import aioconsole
 import asyncio
+import collections
 import telethon
 from telethon import types as tgty, utils as tgutils
 
@@ -54,6 +55,7 @@ class TelegramHandler(object):
         self.mid = mesg_id('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%+./_~')
         self.webpending = {}
         self.refwd_me = False
+        self.cache = collections.OrderedDict()
         # Set event to be waited by irc.check_telegram_auth()
         self.auth_checked = asyncio.Event()
 
@@ -291,6 +293,16 @@ class TelegramHandler(object):
     def get_entity_type(self, entity):
         return type(entity).__name__
 
+    def add_to_cache(self, id, mid, message, user, chan):
+        if len(self.cache) >= 10000:
+            self.cache.popitem(last=False)
+        self.cache[id] = {
+                           'mid': mid,
+                           'rendered_text': message,
+                           'user': user,
+                           'channel': chan
+                         }
+
     async def handle_raw(self, update):
         self.logger.debug('Handling Telegram Raw Event: %s', update)
 
@@ -326,8 +338,11 @@ class TelegramHandler(object):
 
         if event.message.is_private:
             await self.handle_telegram_private_message(user, message)
+            chan = None
         else:
-            await self.handle_telegram_channel_message(event, user, message)
+            chan = await self.handle_telegram_channel_message(event, user, message)
+
+        self.add_to_cache(event.message.id, mid, message, user, chan)
 
         self.refwd_me = False
 
@@ -342,6 +357,7 @@ class TelegramHandler(object):
         entity  = await event.message.get_chat()
         channel = await self.get_irc_channel_from_telegram_id(event.message.chat_id, entity)
         await self.irc.send_msg(user, channel, message)
+        return channel
 
     async def handle_telegram_chat_action(self, event):
         self.logger.debug('Handling Telegram Chat Action: %s', event)
