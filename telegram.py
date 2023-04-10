@@ -86,6 +86,7 @@ class TelegramHandler(object):
             (self.handle_telegram_message    , telethon.events.NewMessage),
             (self.handle_raw,                  telethon.events.Raw),
             (self.handle_telegram_chat_action, telethon.events.ChatAction),
+            (self.handle_telegram_deleted    , telethon.events.MessageDeleted),
         )
         for handler, event in callbacks:
             self.telegram_client.add_event_handler(handler, event)
@@ -303,6 +304,21 @@ class TelegramHandler(object):
                            'channel': chan
                          }
 
+    async def handle_telegram_deleted(self, event):
+        self.logger.debug('Handling Telegram Message Deleted: %s', event)
+
+        for deleted_id in event.original_update.messages:
+            if deleted_id in self.cache:
+                recovered_text = self.cache[deleted_id]['rendered_text']
+                text = '|Deleted| {}'.format(recovered_text)
+                user = self.cache[deleted_id]['user']
+                chan = self.cache[deleted_id]['channel']
+                await self.relay_telegram_message(event=None, user=user, message=text, channel=chan)
+            else:
+                mid = self.mid.num_to_id_offset(deleted_id)
+                text = 'Message id {} deleted not in cache'.format(mid)
+                await self.relay_telegram_private_message(self.irc.service_user, text)
+
     async def handle_raw(self, update):
         self.logger.debug('Handling Telegram Raw Event: %s', update)
 
@@ -314,11 +330,8 @@ class TelegramHandler(object):
     async def handle_telegram_message(self, event, upd_to_webpend=None):
         self.logger.debug('Handling Telegram Message: %s', event)
 
-        if self.mid.mesg_base is None:
-            self.mid.mesg_base = event.message.id
-
         user = self.get_irc_user_from_telegram(event.sender_id)
-        mid = self.mid.num_to_id(event.message.id - self.mid.mesg_base)
+        mid = self.mid.num_to_id_offset(event.message.id)
 
         if upd_to_webpend:
             text = await self.handle_webpage(upd_to_webpend, event.message)
@@ -405,7 +418,7 @@ class TelegramHandler(object):
         replied = await event.message.get_reply_message()
         message = replied.message
         if not message:
-            message = '[{}]'.format(self.mid.num_to_id(replied.id - self.mid.mesg_base))
+            message = '[{}]'.format(self.mid.num_to_id_offset(replied.id))
         elif len(message) > self.reply_len:
             message = message[:self.reply_len]
             trunc = '...'
@@ -604,6 +617,11 @@ class mesg_id:
             return neg + aux + self.alpha[low]
         else:
             return neg + self.alpha[high] + self.alpha[low]
+
+    def num_to_id_offset(self, num):
+        if self.mesg_base is None:
+            self.mesg_base = num
+        return self.num_to_id(num - self.mesg_base)
 
     def id_to_num(self, id, n=1):
         if id:
