@@ -384,22 +384,36 @@ class IRCHandler(object):
             for reply_line in reply:
                 await self.send_msg(self.service_user, None, reply_line, user)
             return
+        defered_send = None
         # Echo channel messages from IRC to other IRC connections
         # because they won't receive event from Telegram
+        # used defered_send function when id is known
         if tgl in self.irc_channels.keys():
-            await self.send_msg_others(user, tgl, message)
+            chan = tgl
+            defered_send = self.send_msg_others
+            defered_target = chan
+        else:
+            chan = None
 
         if tgl == user.irc_nick:
             tgt = self.tg.tg_username.lower()
             # Echo message to the user him/herself in IRC
             # because no event will be received from Telegram
-            await self.send_msg(user, None, message)
+            # used defered_send function when id is known
+            defered_send = self.send_msg
+            defered_target = None
         else:
             tgt = tgl
 
         if tgt in self.iid_to_tid:
             telegram_id = self.iid_to_tid[tgt]
-            await self.tg.telegram_client.send_message(telegram_id, message)
+            tg_msg = await self.tg.telegram_client.send_message(telegram_id, message)
+
+            text = '[{}] {}'.format(self.tg.mid.num_to_id_offset(tg_msg.id), message)
+            self.tg.add_to_cache(tg_msg.id, None, text, user, chan)
+
+            if defered_send:
+                await defered_send(user, defered_target, text)
         else:
             await self.reply_code(user, 'ERR_NOSUCHNICK', (target,))
 
