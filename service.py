@@ -76,14 +76,14 @@ class service:
                 reply = \
                 (
                   'Dialogs:',
-                  ' {:<11} {:<9} {:<9} {:4} {:<3} {:<4} {:<6}  {}'.format(
+                  ' {:<11} {:<9} {:<9} {:5} {:<3} {:<4} {:<6}  {}'.format(
                       'Id', 'Unread', 'Mentions', 'Type', 'Pin', 'Arch', 'Last', 'Name'),
                 )
                 async for dialog in self.tg.telegram_client.iter_dialogs():
                     id, type = tgutils.resolve_id(dialog.id)
                     unr = dialog.unread_count
                     men = dialog.unread_mentions_count
-                    ty = 'User' if dialog.is_user else 'Chat' if dialog.is_group else 'Chan'
+                    ty = self.tg.get_entity_type(dialog.entity, format='short')
                     pin = 'Yes' if dialog.pinned else 'No'
                     arch = 'Yes' if dialog.archived else 'No'
                     last = compact_date(dialog.date)
@@ -94,7 +94,7 @@ class service:
                             name_in_irc = self.tg.tid_to_iid[id]
                         else:
                             name_in_irc = '<Unknown>'
-                    reply += (' {:<11d} {:<9d} {:<9d} {:4} {:<3} {:<4} {:<6}  {}'.format(
+                    reply += (' {:<11d} {:<9d} {:<9d} {:5} {:<3} {:<4} {:<6}  {}'.format(
                                 id,     unr,   men,   ty,  pin,  arch, last, name_in_irc),
                              )
 

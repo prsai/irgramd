@@ -263,7 +263,7 @@ class TelegramHandler(object):
         else:
             entity = await self.telegram_client.get_entity(tid)
             entity_cache[0] = entity
-        entity_type = self.get_entity_type(entity)
+        entity_type = self.get_entity_type(entity, format='long')
         return 'Telegram ' + entity_type + ' ' + str(tid) + ': ' + entity.title
 
     async def get_channel_creation(self, channel, entity_cache):
@@ -291,8 +291,24 @@ class TelegramHandler(object):
             tid = self.id
         return tid
 
-    def get_entity_type(self, entity):
-        return type(entity).__name__
+    def get_entity_type(self, entity, format):
+        if isinstance(entity, tgty.User):
+            short = long = 'User'
+        elif isinstance(entity, tgty.Chat):
+            short = 'Chat'
+            long = 'Chat/Basic Group'
+        elif isinstance(entity, tgty.Channel):
+            if entity.broadcast:
+                short = 'Broad'
+                long = 'Broadcast Channel'
+            elif entity.megagroup:
+                short = 'Mega'
+                long = 'Super/Megagroup Channel'
+            elif entity.gigagroup:
+                short = 'Giga'
+                long = 'Broadcast Gigagroup Channel'
+
+        return short if format == 'short' else long
 
     def add_to_cache(self, id, mid, message, user, chan):
         if len(self.cache) >= 10000:
