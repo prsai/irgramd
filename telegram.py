@@ -21,7 +21,7 @@ from telethon import types as tgty, utils as tgutils
 
 from include import CHAN_MAX_LENGHT, NICK_MAX_LENGTH
 from irc import IRCUser
-from utils import sanitize_filename, is_url_equiv, extract_url, get_human_size, get_human_duration
+from utils import sanitize_filename, is_url_equiv, extract_url, get_human_size, get_human_duration, get_highlighted
 
 # Test IP table
 
@@ -87,6 +87,7 @@ class TelegramHandler(object):
             (self.handle_raw,                  telethon.events.Raw),
             (self.handle_telegram_chat_action, telethon.events.ChatAction),
             (self.handle_telegram_deleted    , telethon.events.MessageDeleted),
+            (self.handle_telegram_edited,      telethon.events.MessageEdited),
         )
         for handler, event in callbacks:
             self.telegram_client.add_event_handler(handler, event)
@@ -310,15 +311,53 @@ class TelegramHandler(object):
 
         return short if format == 'short' else long
 
-    def add_to_cache(self, id, mid, message, user, chan):
+    def add_to_cache(self, id, mid, message, proc_message, user, chan):
         if len(self.cache) >= 10000:
             self.cache.popitem(last=False)
         self.cache[id] = {
                            'mid': mid,
-                           'rendered_text': message,
+                           'text': message,
+                           'rendered_text': proc_message,
                            'user': user,
                            'channel': chan
                          }
+
+    async def handle_telegram_edited(self, event):
+        self.logger.debug('Handling Telegram Message Edited: %s', event)
+
+        id = event.message.id
+        user = self.get_irc_user_from_telegram(event.sender_id)
+        mid = self.mid.num_to_id_offset(id)
+        fmid = '[{}]'.format(mid)
+        message = event.message.message
+        message_rendered = await self.render_text(event, mid, upd_to_webpend=None)
+
+        if id in self.cache:
+            t = self.cache[id]['text']
+            rt = self.cache[id]['rendered_text']
+
+            ht, is_ht = get_highlighted(t, message)
+
+            self.cache[id]['text'] = message
+            self.cache[id]['rendered_text'] = message_rendered
+        else:
+            rt = fmid
+            is_ht = False
+
+        if is_ht:
+            text_edited = ht
+            text_old = fmid
+        else:
+            text_edited = message
+            text_old = rt
+            if user is None:
+                self.refwd_me = True
+
+        text = '|Edited {}| {}'.format(text_old, text_edited)
+        chan = await self.relay_telegram_message(event, user, text)
+
+        if id not in self.cache:
+            self.add_to_cache(id, mid, message, message_rendered, user, chan)
 
     async def handle_telegram_deleted(self, event):
         self.logger.debug('Handling Telegram Message Deleted: %s', event)
@@ -349,6 +388,15 @@ class TelegramHandler(object):
         user = self.get_irc_user_from_telegram(event.sender_id)
         mid = self.mid.num_to_id_offset(event.message.id)
 
+        message = await self.render_text(event, mid, upd_to_webpend)
+
+        chan = await self.relay_telegram_message(event, user, message)
+
+        self.add_to_cache(event.message.id, mid, event.message.message, message, user, chan)
+
+        self.refwd_me = False
+
+    async def render_text(self, event, mid, upd_to_webpend):
         if upd_to_webpend:
             text = await self.handle_webpage(upd_to_webpend, event.message)
         elif event.message.media:
@@ -364,12 +412,7 @@ class TelegramHandler(object):
             refwd_text = ''
 
         message = '[{}] {}{}'.format(mid, refwd_text, text)
-
-        chan = await self.relay_telegram_message(event, user, message)
-
-        self.add_to_cache(event.message.id, mid, message, user, chan)
-
-        self.refwd_me = False
+        return message
 
     async def relay_telegram_message(self, event, user, message, channel=None):
         private = (event and event.message.is_private) or (not event and not channel)

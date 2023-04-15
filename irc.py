@@ -409,8 +409,9 @@ class IRCHandler(object):
             telegram_id = self.iid_to_tid[tgt]
             tg_msg = await self.tg.telegram_client.send_message(telegram_id, message)
 
-            text = '[{}] {}'.format(self.tg.mid.num_to_id_offset(tg_msg.id), message)
-            self.tg.add_to_cache(tg_msg.id, None, text, user, chan)
+            mid = self.tg.mid.num_to_id_offset(tg_msg.id)
+            text = '[{}] {}'.format(mid, message)
+            self.tg.add_to_cache(tg_msg.id, mid, text, message, user, chan)
 
             if defered_send:
                 await defered_send(user, defered_target, text)

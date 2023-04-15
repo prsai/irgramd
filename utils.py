@@ -11,6 +11,7 @@ import itertools
 import textwrap
 import re
 import datetime
+import difflib
 
 # Constants
 
@@ -121,3 +122,44 @@ def compact_date(date):
         compact_date = date.strftime('%Y')
 
     return compact_date
+
+def get_highlighted(a, b):
+    awl = len(a.split())
+    bwl = len(b.split())
+    delta_size = abs(awl - bwl)
+    highlighted = True
+
+    if not a:
+        res = '> {}'.format(b)
+    elif delta_size > 5:
+        res = b
+        highlighted = False
+    else:
+        al = a.split(' ')
+        bl = b.split(' ')
+        diff = difflib.ndiff(al, bl)
+        ld = list(diff)
+        res = ''
+        d = ''
+        eq = 0
+
+        for i in ld:
+            if i == '- ' or i[0] == '?':
+                continue
+            elif i == '  ' or i == '+ ':
+                res += ' '
+                continue
+            elif i[0] == '-':
+                res += '.{}. '.format(i[2:])
+            elif i[0] == '+':
+                res += '_{}_ '.format(i[2:])
+            else:
+                res += '{} '.format(i[2:])
+                eq += 1
+
+        delta_eq = bwl - eq
+        if delta_eq > 3:
+            res = b
+            highlighted = False
+
+    return res, highlighted
