@@ -243,19 +243,6 @@ class TelegramHandler(object):
             idle = None
         return idle
 
-    async def is_bot(self, irc_nick, tid=None):
-        user = self.irc.users[irc_nick]
-        if user.stream or user.is_service:
-            bot = False
-        else:
-            bot = user.bot
-        if bot == None:
-            tid = self.get_tid(irc_nick, tid)
-            tg_user = await self.telegram_client.get_entity(tid)
-            bot = tg_user.bot
-            user.bot = bot
-        return bot
-
     async def get_channel_topic(self, channel, entity_cache):
         tid = self.get_tid(channel)
         # entity_cache should be a list to be a persistent and by reference value
@@ -310,6 +297,19 @@ class TelegramHandler(object):
                 long = 'Broadcast Gigagroup Channel'
 
         return short if format == 'short' else long
+
+    async def is_bot(self, irc_nick, tid=None):
+        user = self.irc.users[irc_nick]
+        if user.stream or user.is_service:
+            bot = False
+        else:
+            bot = user.bot
+        if bot == None:
+            tid = self.get_tid(irc_nick, tid)
+            tg_user = await self.telegram_client.get_entity(tid)
+            bot = tg_user.bot
+            user.bot = bot
+        return bot
 
     def add_to_cache(self, id, mid, message, proc_message, user, chan):
         if len(self.cache) >= 10000:
