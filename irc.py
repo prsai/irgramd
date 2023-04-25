@@ -411,7 +411,7 @@ class IRCHandler(object):
 
             mid = self.tg.mid.num_to_id_offset(tg_msg.id)
             text = '[{}] {}'.format(mid, message)
-            self.tg.add_to_cache(tg_msg.id, mid, text, message, user, chan)
+            self.tg.to_cache(tg_msg.id, mid, text, message, user, chan, media=None)
 
             if defered_send:
                 await defered_send(user, defered_target, text)

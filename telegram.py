@@ -16,12 +16,14 @@ import asyncio
 import collections
 import telethon
 from telethon import types as tgty, utils as tgutils
+from telethon.tl.functions.messages import GetMessagesReactionsRequest
 
 # Local modules
 
 from include import CHAN_MAX_LENGHT, NICK_MAX_LENGTH
 from irc import IRCUser
 from utils import sanitize_filename, is_url_equiv, extract_url, get_human_size, get_human_duration, get_highlighted
+from emoji2emoticon import emo
 
 # Test IP table
 
@@ -311,7 +313,35 @@ class TelegramHandler(object):
             user.bot = bot
         return bot
 
-    def add_to_cache(self, id, mid, message, proc_message, user, chan):
+    async def edition_case(self, msg):
+        def msg_edited(m):
+            return m.id in self.cache and \
+                   ( m.message != self.cache[m.id]['text']
+                     or m.media != self.cache[m.id]['media']
+                   )
+        async def get_reactions(m):
+            react = await self.telegram_client(GetMessagesReactionsRequest(m.peer_id, id=[m.id]))
+            return react.updates[0].reactions.recent_reactions
+
+        react = None
+        if msg.reactions is None:
+            case = 'edition'
+        elif (reactions := await get_reactions(msg)) is None:
+            if msg_edited(msg):
+                case = 'edition'
+            else:
+                case = 'react-del'
+        elif react := next((x for x in reactions if x.date == msg.edit_date), None):
+            case = 'react-add'
+        else:
+            if msg_edited(msg):
+                case = 'edition'
+            else:
+                case = 'react-del'
+            react = None
+        return case, react
+
+    def to_cache(self, id, mid, message, proc_message, user, chan, media):
         if len(self.cache) >= 10000:
             self.cache.popitem(last=False)
         self.cache[id] = {
@@ -319,45 +349,65 @@ class TelegramHandler(object):
                            'text': message,
                            'rendered_text': proc_message,
                            'user': user,
-                           'channel': chan
+                           'channel': chan,
+                           'media': media
                          }
 
     async def handle_telegram_edited(self, event):
         self.logger.debug('Handling Telegram Message Edited: %s', event)
 
         id = event.message.id
-        user = self.get_irc_user_from_telegram(event.sender_id)
         mid = self.mid.num_to_id_offset(id)
         fmid = '[{}]'.format(mid)
         message = event.message.message
         message_rendered = await self.render_text(event, mid, upd_to_webpend=None)
 
-        if id in self.cache:
-            t = self.cache[id]['text']
-            rt = self.cache[id]['rendered_text']
+        edition_case, reaction = await self.edition_case(event.message)
+        if edition_case == 'edition':
+            action = 'Edited'
+            user = self.get_irc_user_from_telegram(event.sender_id)
+            if id in self.cache:
+                t = self.cache[id]['text']
+                rt = self.cache[id]['rendered_text']
 
-            ht, is_ht = get_highlighted(t, message)
+                ht, is_ht = get_highlighted(t, message)
+            else:
+                rt = fmid
+                is_ht = False
 
-            self.cache[id]['text'] = message
-            self.cache[id]['rendered_text'] = message_rendered
+            if is_ht:
+                edition_react = ht
+                text_old = fmid
+            else:
+                edition_react = message
+                text_old = rt
+                if user is None:
+                    self.refwd_me = True
+
+        # Reactions
         else:
-            rt = fmid
-            is_ht = False
+            action = 'React'
+            if len(message_rendered) > 50:
+                text_old = '{}...'.format(message_rendered[:50])
+            else:
+                text_old = message_rendered
 
-        if is_ht:
-            text_edited = ht
-            text_old = fmid
-        else:
-            text_edited = message
-            text_old = rt
-            if user is None:
-                self.refwd_me = True
+            if edition_case == 'react-add':
+                user = self.get_irc_user_from_telegram(reaction.peer_id.user_id)
+                emoji = reaction.reaction.emoticon
+                react_action = '+'
+                react_icon = emo[emoji] if emoji in emo else emoji
+            elif edition_case == 'react-del':
+                user = self.get_irc_user_from_telegram(event.sender_id)
+                react_action = '-'
+                react_icon = ''
+            edition_react = '{}{}'.format(react_action, react_icon)
 
-        text = '|Edited {}| {}'.format(text_old, text_edited)
+        text = '|{} {}| {}'.format(action, text_old, edition_react)
+
         chan = await self.relay_telegram_message(event, user, text)
 
-        if id not in self.cache:
-            self.add_to_cache(id, mid, message, message_rendered, user, chan)
+        self.to_cache(id, mid, message, message_rendered, user, chan, event.message.media)
 
     async def handle_telegram_deleted(self, event):
         self.logger.debug('Handling Telegram Message Deleted: %s', event)
@@ -392,7 +442,7 @@ class TelegramHandler(object):
 
         chan = await self.relay_telegram_message(event, user, message)
 
-        self.add_to_cache(event.message.id, mid, event.message.message, message, user, chan)
+        self.to_cache(event.message.id, mid, event.message.message, message, user, chan, event.message.media)
 
         self.refwd_me = False
 
