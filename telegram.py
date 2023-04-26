@@ -22,7 +22,7 @@ from telethon.tl.functions.messages import GetMessagesReactionsRequest
 
 from include import CHAN_MAX_LENGHT, NICK_MAX_LENGTH
 from irc import IRCUser
-from utils import sanitize_filename, is_url_equiv, extract_url, get_human_size, get_human_duration, get_highlighted
+from utils import sanitize_filename, is_url_equiv, extract_url, get_human_size, get_human_duration, get_highlighted, fix_braces
 from emoji2emoticon import emo
 
 # Test IP table
@@ -47,7 +47,7 @@ class TelegramHandler(object):
         self.test_ip    = settings['test_host'] if settings['test_host'] else TEST_IPS[self.test_dc]
         self.test_port  = settings['test_port']
         self.ask_code   = settings['ask_code']
-        self.reply_len  = settings['reply_length']
+        self.quote_len  = settings['quote_length']
         self.media_cn   = 0
         self.irc        = irc
         self.authorized = False
@@ -387,8 +387,9 @@ class TelegramHandler(object):
         # Reactions
         else:
             action = 'React'
-            if len(message_rendered) > 50:
-                text_old = '{}...'.format(message_rendered[:50])
+            if len(message_rendered) > self.quote_len:
+                text_old = '{}...'.format(message_rendered[:self.quote_len])
+                text_old = fix_braces(text_old)
             else:
                 text_old = message_rendered
 
@@ -528,8 +529,8 @@ class TelegramHandler(object):
         message = replied.message
         if not message:
             message = '[{}]'.format(self.mid.num_to_id_offset(replied.id))
-        elif len(message) > self.reply_len:
-            message = message[:self.reply_len]
+        elif len(message) > self.quote_len:
+            message = message[:self.quote_len]
             trunc = '...'
         replied_user = self.get_irc_user_from_telegram(replied.sender_id)
         if replied_user is None:

@@ -80,7 +80,7 @@ if __name__ == '__main__':
     tornado.options.define('pam', default=False, help='Use PAM for IRC authentication, if not set you should set `irc_password`')
     tornado.options.define('pam_group', default=None, metavar='GROUP', help='Unix group allowed if `pam` enabled, if empty any user is allowed')
     tornado.options.define('phone', default=None, metavar='PHONE_NUMBER', help='Phone number associated with the Telegram account to receive the authorization codes if necessary')
-    tornado.options.define('reply_length', default=50, metavar='LENGTH', help='Max length of the text refered in replies, if longer is truncated')
+    tornado.options.define('quote_length', default=50, metavar='LENGTH', help='Max length of the text quoted in replies and reactions, if longer is truncated')
     tornado.options.define('service_user', default='TelegramServ', metavar='SERVICE_NICK', help='Nick of the service/control user, must be a nick not used by a real Telegram user')
     tornado.options.define('test', default=False, help='Connect to Telegram test environment')
     tornado.options.define('test_datacenter', default=2, metavar='DATACENTER_NUMBER', help='Datacenter to connect to Telegram test environment')

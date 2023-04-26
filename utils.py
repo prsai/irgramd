@@ -163,3 +163,11 @@ def get_highlighted(a, b):
             highlighted = False
 
     return res, highlighted
+
+def fix_braces(text):
+    # Remove braces not closed, if the text was truncated
+    if text.endswith(' {...'):
+        subtext = text[:-5]
+        if not '{}' in subtext:
+            return '{}...'.format(subtext)
+    return text
