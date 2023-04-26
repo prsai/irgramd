@@ -7,13 +7,14 @@ irgramd is written in [python] (version 3), it acts as an IRC server
 where an IRC client can connect and on the other side it's a Telegram client
 using the [Telethon] library.
 
-**[irgramd primary repository] is in [darcs] version control system, [github
-repository] is synched as secondary**
+**[irgramd primary repository] is in [darcs] version control system, github
+is used as [project management and secondary repository]**
 
-**irgramd is a fork from [pbui/irtelegramd] to resume the development**
+**irgramd was forked from [pbui/irtelegramd], was heavily modified and
+currently is a project on its own**
 
-**irgramd is under active development in alpha state, several planned features
-are not implemented yet**
+**irgramd is under active development in alpha state, though usable, several
+planned features are not implemented yet**
 
 ## How it works
 
@@ -33,6 +34,21 @@ different IRC clients on different locations or devices, so one irgramd
 instance only connects to one Telegram account, if you want to connect to
 several Telegram accounts you will need to run several irgramd instances.
 
+## Features
+
+- Channels, groups and private chats
+- Users and channels mapped in IRC
+- Messages (receive, send)
+- Media in messages (receive, download)
+- Replies (receive)
+- Forwards (receive)
+- Deletes (receive)
+- Editions (receive)
+- Reactions (receive)
+- Dialogs management
+- Authentication and TLS for IRC
+- Multiple connections from IRC
+
 ## License
 
 Copyright (c) 2019 Peter Bui <pbui@bx612.space>  
@@ -47,5 +63,5 @@ can be found in the LICENSE file included in this project.
 [Telethon]: https://github.com/LonamiWebs/Telethon
 [irgramd primary repository]: https://src.presi.org/darcs/irgramd
 [darcs]: http://darcs.net
-[github repository]: https://github.com/prsai/irgramd
+[project management and secondary repository]: https://github.com/prsai/irgramd
 [pbui/irtelegramd]: https://github.com/pbui/irtelegramd
