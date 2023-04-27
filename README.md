@@ -42,12 +42,19 @@ several Telegram accounts you will need to run several irgramd instances.
 - Media in messages (receive, download)
 - Replies (receive)
 - Forwards (receive)
-- Deletes (receive)
+- Deletions (receive)
 - Editions (receive)
 - Reactions (receive)
 - Dialogs management
 - Authentication and TLS for IRC
 - Multiple connections from IRC
+
+## Requirements
+
+- [python] (>= v3.8)
+- [telethon] (tested with v1.28.5)
+- [tornado] (tested with v6.1.0)
+- [aioconsole] (tested with v0.6.1)
 
 ## License
 
@@ -65,3 +72,6 @@ can be found in the LICENSE file included in this project.
 [darcs]: http://darcs.net
 [project management and secondary repository]: https://github.com/prsai/irgramd
 [pbui/irtelegramd]: https://github.com/pbui/irtelegramd
+[python]: https://www.python.org
+[tornado]: https://www.tornadoweb.org
+[aioconsole]: https://github.com/vxgmichel/aioconsole
