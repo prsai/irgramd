@@ -197,6 +197,19 @@ class TelegramHandler(object):
         if nick == self.tg_username: return None
         return self.irc.users[nick.lower()]
 
+    def get_irc_nick_from_telegram_forward(self, fwd):
+        if fwd.from_id is None:
+            # telegram user has privacy options to show only the name
+            nick = fwd.from_name
+        else:
+            user = self.get_irc_user_from_telegram(fwd.from_id.user_id)
+            if user is None:
+                nick = '{}'
+                self.refwd_me = True
+            else:
+                nick = user.irc_nick
+        return nick
+
     async def get_irc_nick_from_telegram_id(self, tid, entity=None):
         if tid not in self.tid_to_iid:
             user = entity or await self.telegram_client.get_entity(tid)
@@ -544,13 +557,8 @@ class TelegramHandler(object):
 
         return '|Re {}: {}{}| '.format(replied_nick, message, trunc)
 
-    async def handle_telegram_forward(self, event):        
-        forwarded_user = self.get_irc_user_from_telegram(event.forward.from_id.user_id)
-        if forwarded_user is None:
-            forwarded_nick = '{}'
-            self.refwd_me = True
-        else:
-            forwarded_nick = forwarded_user.irc_nick
+    async def handle_telegram_forward(self, event):
+        forwarded_nick = self.get_irc_nick_from_telegram_forward(event.message.fwd_from)
         forwarded_peer = event.forward.saved_from_peer
         if isinstance(forwarded_peer, tgty.PeerChannel):
             dest = ' ' + await self.get_irc_channel_from_telegram_id(forwarded_peer.channel_id)
