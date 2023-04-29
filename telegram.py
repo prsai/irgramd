@@ -361,7 +361,7 @@ class TelegramHandler(object):
         id = event.message.id
         mid = self.mid.num_to_id_offset(id)
         fmid = '[{}]'.format(mid)
-        message = event.message.message
+        message = e.replace_mult(event.message.message, e.emo)
         message_rendered = await self.render_text(event, mid, upd_to_webpend=None)
 
         edition_case, reaction = await self.edition_case(event.message)
@@ -369,7 +369,7 @@ class TelegramHandler(object):
             action = 'Edited'
             user = self.get_irc_user_from_telegram(event.sender_id)
             if id in self.cache:
-                t = self.cache[id]['text']
+                t = e.replace_mult(self.cache[id]['text'], e.emo)
                 rt = self.cache[id]['rendered_text']
 
                 ht, is_ht = get_highlighted(t, message)
@@ -465,6 +465,7 @@ class TelegramHandler(object):
             refwd_text = ''
 
         message = '[{}] {}{}'.format(mid, refwd_text, text)
+        message = e.replace_mult(message, e.emo)
         return message
 
     async def relay_telegram_message(self, event, user, message, channel=None):

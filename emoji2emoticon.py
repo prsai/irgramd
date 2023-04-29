@@ -86,3 +86,9 @@ emo = {
         '\U0001f644': '"o o,"',
         '\U0001f970': '":)e>"'
       }
+
+def replace_mult(line, emo):
+  for utf_emo in emo:
+    if utf_emo in line:
+      line = line.replace(utf_emo, emo[utf_emo])
+  return line
