@@ -23,7 +23,7 @@ from telethon.tl.functions.messages import GetMessagesReactionsRequest
 from include import CHAN_MAX_LENGHT, NICK_MAX_LENGTH
 from irc import IRCUser
 from utils import sanitize_filename, is_url_equiv, extract_url, get_human_size, get_human_duration, get_highlighted, fix_braces
-from emoji2emoticon import emo
+import emoji2emoticon as e
 
 # Test IP table
 
@@ -48,6 +48,8 @@ class TelegramHandler(object):
         self.test_port  = settings['test_port']
         self.ask_code   = settings['ask_code']
         self.quote_len  = settings['quote_length']
+        if not settings['emoji_ascii']:
+            e.emo = {}
         self.media_cn   = 0
         self.irc        = irc
         self.authorized = False
@@ -397,7 +399,7 @@ class TelegramHandler(object):
                 user = self.get_irc_user_from_telegram(reaction.peer_id.user_id)
                 emoji = reaction.reaction.emoticon
                 react_action = '+'
-                react_icon = emo[emoji] if emoji in emo else emoji
+                react_icon = e.emo[emoji] if emoji in e.emo else emoji
             elif edition_case == 'react-del':
                 user = self.get_irc_user_from_telegram(event.sender_id)
                 react_action = '-'

@@ -72,6 +72,7 @@ if __name__ == '__main__':
     tornado.options.define('char_encoding', default='utf-8', metavar='ENCODING', help='Character encoding for IRC')
     tornado.options.define('config', default='irgramdrc', metavar='CONFIGFILE', help='Config file absolute or relative to `config_dir` (command line options override it)')
     tornado.options.define('config_dir', default='~/.config/irgramd', metavar='PATH', help='Configuration directory where telegram session info is saved')
+    tornado.options.define('emoji_ascii', default=False, help='Replace emoji with ASCII emoticons')
     tornado.options.define('irc_address', default='127.0.0.1', metavar='ADDRESS', help='Address to listen on for IRC')
     tornado.options.define('irc_nicks', type=str, multiple=True, metavar='nick,..', help='List of nicks allowed for IRC, if `pam` and optionally `pam_group` are set, PAM authentication will be used instead')
     tornado.options.define('irc_password', default='', metavar='PASSWORD', help='Password for IRC authentication, if `pam` is set, PAM authentication will be used instead')
