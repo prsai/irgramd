@@ -375,7 +375,7 @@ class TelegramHandler(object):
         mid = self.mid.num_to_id_offset(id)
         fmid = '[{}]'.format(mid)
         message = e.replace_mult(event.message.message, e.emo)
-        message_rendered = await self.render_text(event, mid, upd_to_webpend=None)
+        message_rendered = await self.render_text(event.message, mid, upd_to_webpend=None)
 
         edition_case, reaction = await self.edition_case(event.message)
         if edition_case == 'edition':
@@ -444,50 +444,53 @@ class TelegramHandler(object):
         self.logger.debug('Handling Telegram Raw Event: %s', update)
 
         if isinstance(update, tgty.UpdateWebPage) and isinstance(update.webpage, tgty.WebPage):
-            event = self.webpending.pop(update.webpage.id, None)
-            if event:
-                await self.handle_telegram_message(event, update.webpage)
+            message = self.webpending.pop(update.webpage.id, None)
+            if message:
+                await self.handle_telegram_message(event=None, message=message, upd_to_webpend=update.webpage)
 
-    async def handle_telegram_message(self, event, upd_to_webpend=None):
-        self.logger.debug('Handling Telegram Message: %s', event)
+    async def handle_telegram_message(self, event, message=None, upd_to_webpend=None):
+        self.logger.debug('Handling Telegram Message: %s', event or message)
 
-        user = self.get_irc_user_from_telegram(event.sender_id)
-        mid = self.mid.num_to_id_offset(event.message.id)
+        if event:
+            msg = event.message
+        else:
+            msg = message
 
-        message = await self.render_text(event, mid, upd_to_webpend)
+        user = self.get_irc_user_from_telegram(msg.sender_id)
+        mid = self.mid.num_to_id_offset(msg.id)
+        text = await self.render_text(msg, mid, upd_to_webpend)
+        chan = await self.relay_telegram_message(msg, user, text)
 
-        chan = await self.relay_telegram_message(event, user, message)
-
-        self.to_cache(event.message.id, mid, event.message.message, message, user, chan, event.message.media)
+        self.to_cache(msg.id, mid, msg.message, text, user, chan, msg.media)
 
         self.refwd_me = False
 
-    async def render_text(self, event, mid, upd_to_webpend):
+    async def render_text(self, message, mid, upd_to_webpend):
         if upd_to_webpend:
-            text = await self.handle_webpage(upd_to_webpend, event.message)
-        elif event.message.media:
-            text = await self.handle_telegram_media(event)
+            text = await self.handle_webpage(upd_to_webpend, message)
+        elif message.media:
+            text = await self.handle_telegram_media(message)
         else:
-            text = event.message.message
+            text = message.message
 
-        if event.message.is_reply:
-            refwd_text = await self.handle_telegram_reply(event)
-        elif event.message.forward:
-            refwd_text = await self.handle_telegram_forward(event)
+        if message.is_reply:
+            refwd_text = await self.handle_telegram_reply(message)
+        elif message.forward:
+            refwd_text = await self.handle_telegram_forward(message)
         else:
             refwd_text = ''
 
-        message = '[{}] {}{}'.format(mid, refwd_text, text)
-        message = e.replace_mult(message, e.emo)
-        return message
+        final_text = '[{}] {}{}'.format(mid, refwd_text, text)
+        final_text = e.replace_mult(final_text, e.emo)
+        return final_text
 
-    async def relay_telegram_message(self, event, user, message, channel=None):
-        private = (event and event.message.is_private) or (not event and not channel)
+    async def relay_telegram_message(self, message, user, text, channel=None):
+        private = (message and message.is_private) or (not message and not channel)
         if private:
-            await self.relay_telegram_private_message(user, message)
+            await self.relay_telegram_private_message(user, text)
             chan = None
         else:
-            chan = await self.relay_telegram_channel_message(event, user, message, channel)
+            chan = await self.relay_telegram_channel_message(message, user, text, channel)
         return chan
 
     async def relay_telegram_private_message(self, user, message):
@@ -495,15 +498,15 @@ class TelegramHandler(object):
 
         await self.irc.send_msg(user, None, message)
 
-    async def relay_telegram_channel_message(self, event, user, message, channel=None):
-        self.logger.debug('Handling Telegram Channel Message: %s', event)
+    async def relay_telegram_channel_message(self, message, user, text, channel=None):
+        self.logger.debug('Handling Telegram Channel Message: %s', message or text)
 
-        if event:
-            entity = await event.message.get_chat()
-            chan = await self.get_irc_channel_from_telegram_id(event.message.chat_id, entity)
+        if message:
+            entity = await message.get_chat()
+            chan = await self.get_irc_channel_from_telegram_id(message.chat_id, entity)
         else:
             chan = channel
-        await self.irc.send_msg(user, chan, message)
+        await self.irc.send_msg(user, chan, text)
         return chan
 
     async def handle_telegram_chat_action(self, event):
@@ -539,14 +542,14 @@ class TelegramHandler(object):
                 self.irc.iid_to_tid[channel] = chat.id
                 await self.irc.join_irc_channel(self.irc.irc_nick, channel, full_join=True)
 
-    async def handle_telegram_reply(self, event):
+    async def handle_telegram_reply(self, message):
         trunc = ''
-        replied = await event.message.get_reply_message()
-        message = replied.message
-        if not message:
-            message = '[{}]'.format(self.mid.num_to_id_offset(replied.id))
-        elif len(message) > self.quote_len:
-            message = message[:self.quote_len]
+        replied = await message.get_reply_message()
+        replied_msg = replied.message
+        if not replied_msg:
+            replied_msg = '[{}]'.format(self.mid.num_to_id_offset(replied.id))
+        elif len(replied_msg) > self.quote_len:
+            replied_msg = replied_msg[:self.quote_len]
             trunc = '...'
         replied_user = self.get_irc_user_from_telegram(replied.sender_id)
         if replied_user is None:
@@ -555,11 +558,11 @@ class TelegramHandler(object):
         else:
             replied_nick = replied_user.irc_nick
 
-        return '|Re {}: {}{}| '.format(replied_nick, message, trunc)
+        return '|Re {}: {}{}| '.format(replied_nick, replied_msg, trunc)
 
-    async def handle_telegram_forward(self, event):
-        forwarded_nick = self.get_irc_nick_from_telegram_forward(event.message.fwd_from)
-        forwarded_peer = event.forward.saved_from_peer
+    async def handle_telegram_forward(self, message):
+        forwarded_nick = self.get_irc_nick_from_telegram_forward(message.fwd_from)
+        forwarded_peer = message.fwd_from.saved_from_peer
         if isinstance(forwarded_peer, tgty.PeerChannel):
             dest = ' ' + await self.get_irc_channel_from_telegram_id(forwarded_peer.channel_id)
         elif isinstance(forwarded_peer, tgty.PeerChat):
@@ -573,8 +576,7 @@ class TelegramHandler(object):
 
         return '|Fwd {}{}| '.format(forwarded_nick, dest)
 
-    async def handle_telegram_media(self, event):
-        message = event.message
+    async def handle_telegram_media(self, message):
         caption = ' | {}'.format(message.message) if message.message else ''
         to_download = True
         media_url_or_data = ''
@@ -588,7 +590,7 @@ class TelegramHandler(object):
                 media_type = 'webpending'
                 media_url_or_data = message.message
                 caption = ''
-                self.webpending[message.media.webpage.id] = event
+                self.webpending[message.media.webpage.id] = message
             else:
                 media_type = 'webunknown'
                 media_url_or_data = message.message
