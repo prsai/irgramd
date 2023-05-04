@@ -16,9 +16,11 @@ class service:
             'code':        (self.handle_command_code,                 1,  1),
             'dialog':      (self.handle_command_dialog,               1,  2),
             'help':        (self.handle_command_help,                 0,  1),
+            'history':     (self.handle_command_history,              1,  3),
         }
         self.ask_code = settings['ask_code']
         self.tg = telegram
+        self.irc = telegram.irc
         self.tmp_ircnick = None
 
     async def parse_command(self, line, nick):
@@ -144,6 +146,81 @@ class service:
             help_text = ('help: Unknown command',)
         return help_text
 
+    async def handle_command_history(self, peer=None, limit='10', add_unread=None, help=None):
+        if not help:
+            def get_peer_id(tgt):
+                if tgt in self.irc.users or tgt in self.irc.irc_channels:
+                    peer_id = self.tg.get_tid(tgt)
+                    reply = None
+                else:
+                    peer_id = None
+                    reply = ('Unknown user or channel',)
+                return peer_id, reply
+
+            async def get_unread(tgt):
+                async for dialog in self.tg.telegram_client.iter_dialogs():
+                    id, type = tgutils.resolve_id(dialog.id)
+                    if id in self.tg.tid_to_iid.keys():
+                        name = self.tg.tid_to_iid[id]
+                        if tgt == name.lower():
+                            count = dialog.unread_count
+                            reply = None
+                            break
+                else:
+                    count = None
+                    reply = ('Unknown unread',)
+                return count, reply
+
+            def conv_int(num_str):
+                if num_str.isdigit():
+                    n = int(num_str)
+                    err = None
+                else:
+                    n = None
+                    err = ('Invalid argument',)
+                return n, err
+
+            tgt = peer.lower()
+            peer_id, reply = get_peer_id(tgt)
+            if reply: return reply
+
+            if limit == 'unread':
+                add_unread = '0' if add_unread is None else add_unread
+                add_unread_int, reply = conv_int(add_unread)
+                if reply: return reply
+
+                li, reply = await get_unread(tgt)
+                if reply: return reply
+                li += add_unread_int
+            elif add_unread is not None:
+                reply = ('Wrong number of arguments',)
+                return reply
+            elif limit == 'all':
+                li = None
+            else:
+                li, reply = conv_int(limit)
+                if reply: return reply
+
+            his = await self.tg.telegram_client.get_messages(peer_id, limit=li)
+            for msg in reversed(his):
+                await self.tg.handle_telegram_message(event=None, message=msg)
+            reply = ()
+            return reply
+
+        else: # HELP.brief or HELP.desc (first line)
+            reply = ('   history   Get messages from history',)
+        if help == HELP.desc:  # rest of HELP.desc
+            reply += \
+            (
+              '   history <peer> [<limit>|all|unread [<plusN>]]',
+              'Get last <limit> number of messages already sent to <peer>',
+              '(channel or user). If not set <limit> is 10.',
+              'Instead of <limit>, "unread" is for messages not marked as read,',
+              'optionally <plusN> number of previous messages to the first unread.',
+              'Instead of <limit>, "all" is for retrieving all available messages',
+              'in <peer>.',
+            )
+        return reply
 
 class HELP:
     desc = 1
