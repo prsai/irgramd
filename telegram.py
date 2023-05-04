@@ -451,10 +451,7 @@ class TelegramHandler(object):
     async def handle_telegram_message(self, event, message=None, upd_to_webpend=None):
         self.logger.debug('Handling Telegram Message: %s', event or message)
 
-        if event:
-            msg = event.message
-        else:
-            msg = message
+        msg = event.message if event else message
 
         user = self.get_irc_user_from_telegram(msg.sender_id)
         mid = self.mid.num_to_id_offset(msg.id)
