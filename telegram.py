@@ -434,7 +434,7 @@ class TelegramHandler(object):
                 text = '|Deleted| {}'.format(recovered_text)
                 user = self.cache[deleted_id]['user']
                 chan = self.cache[deleted_id]['channel']
-                await self.relay_telegram_message(event=None, user=user, message=text, channel=chan)
+                await self.relay_telegram_message(message=None, user=user, text=text, channel=chan)
             else:
                 mid = self.mid.num_to_id_offset(deleted_id)
                 text = 'Message id {} deleted not in cache'.format(mid)
