@@ -203,7 +203,7 @@ class service:
 
             his = await self.tg.telegram_client.get_messages(peer_id, limit=li)
             for msg in reversed(his):
-                await self.tg.handle_telegram_message(event=None, message=msg)
+                await self.tg.handle_telegram_message(event=None, message=msg, history=True)
             reply = ()
             return reply
 

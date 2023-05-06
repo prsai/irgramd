@@ -22,7 +22,7 @@ from telethon.tl.functions.messages import GetMessagesReactionsRequest
 
 from include import CHAN_MAX_LENGHT, NICK_MAX_LENGTH
 from irc import IRCUser
-from utils import sanitize_filename, is_url_equiv, extract_url, get_human_size, get_human_duration, get_highlighted, fix_braces
+from utils import sanitize_filename, is_url_equiv, extract_url, get_human_size, get_human_duration, get_highlighted, fix_braces, format_timestamp
 import emoji2emoticon as e
 
 # Test IP table
@@ -48,6 +48,8 @@ class TelegramHandler(object):
         self.test_port  = settings['test_port']
         self.ask_code   = settings['ask_code']
         self.quote_len  = settings['quote_length']
+        self.hist_fmt   = settings['hist_timestamp_format']
+        self.timezone   = settings['timezone']
         if not settings['emoji_ascii']:
             e.emo = {}
         self.media_cn   = 0
@@ -448,7 +450,7 @@ class TelegramHandler(object):
             if message:
                 await self.handle_telegram_message(event=None, message=message, upd_to_webpend=update.webpage)
 
-    async def handle_telegram_message(self, event, message=None, upd_to_webpend=None):
+    async def handle_telegram_message(self, event, message=None, upd_to_webpend=None, history=False):
         self.logger.debug('Handling Telegram Message: %s', event or message)
 
         msg = event.message if event else message
@@ -456,13 +458,14 @@ class TelegramHandler(object):
         user = self.get_irc_user_from_telegram(msg.sender_id)
         mid = self.mid.num_to_id_offset(msg.id)
         text = await self.render_text(msg, mid, upd_to_webpend)
-        chan = await self.relay_telegram_message(msg, user, text)
+        text_send = self.set_history_timestamp(text, history, msg.date)
+        chan = await self.relay_telegram_message(msg, user, text_send)
 
         self.to_cache(msg.id, mid, msg.message, text, user, chan, msg.media)
 
         self.refwd_me = False
 
-    async def render_text(self, message, mid, upd_to_webpend):
+    async def render_text(self, message, mid, upd_to_webpend, history=False):
         if upd_to_webpend:
             text = await self.handle_webpage(upd_to_webpend, message)
         elif message.media:
@@ -480,6 +483,14 @@ class TelegramHandler(object):
         final_text = '[{}] {}{}'.format(mid, refwd_text, text)
         final_text = e.replace_mult(final_text, e.emo)
         return final_text
+
+    def set_history_timestamp(self, text, history, date):
+        if history and self.hist_fmt:
+            timestamp = format_timestamp(self.hist_fmt, self.timezone, date)
+            res = '{} {}'.format(timestamp, text)
+        else:
+            res = text
+        return res
 
     async def relay_telegram_message(self, message, user, text, channel=None):
         private = (message and message.is_private) or (not message and not channel)

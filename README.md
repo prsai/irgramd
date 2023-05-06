@@ -51,7 +51,7 @@ several Telegram accounts you will need to run several irgramd instances.
 
 ## Requirements
 
-- [python] (>= v3.8)
+- [python] (>= v3.9)
 - [telethon] (tested with v1.28.5)
 - [tornado] (tested with v6.1.0)
 - [aioconsole] (tested with v0.6.1)

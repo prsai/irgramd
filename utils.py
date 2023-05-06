@@ -11,6 +11,7 @@ import itertools
 import textwrap
 import re
 import datetime
+import zoneinfo
 import difflib
 
 # Constants
@@ -171,3 +172,7 @@ def fix_braces(text):
         if not '{}' in subtext:
             return '{}...'.format(subtext)
     return text
+
+def format_timestamp(format, tz, date):
+    date_local = date.astimezone(zoneinfo.ZoneInfo(tz))
+    return date_local.strftime(format)
