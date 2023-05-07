@@ -17,6 +17,7 @@ class service:
             'dialog':      (self.handle_command_dialog,               1,  2),
             'help':        (self.handle_command_help,                 0,  1),
             'history':     (self.handle_command_history,              1,  3),
+            'mark_read':   (self.handle_command_mark_read,            1,  1),
         }
         self.ask_code = settings['ask_code']
         self.tg = telegram
@@ -148,15 +149,6 @@ class service:
 
     async def handle_command_history(self, peer=None, limit='10', add_unread=None, help=None):
         if not help:
-            def get_peer_id(tgt):
-                if tgt in self.irc.users or tgt in self.irc.irc_channels:
-                    peer_id = self.tg.get_tid(tgt)
-                    reply = None
-                else:
-                    peer_id = None
-                    reply = ('Unknown user or channel',)
-                return peer_id, reply
-
             async def get_unread(tgt):
                 async for dialog in self.tg.telegram_client.iter_dialogs():
                     id, type = tgutils.resolve_id(dialog.id)
@@ -181,7 +173,7 @@ class service:
                 return n, err
 
             tgt = peer.lower()
-            peer_id, reply = get_peer_id(tgt)
+            peer_id, reply = self.get_peer_id(tgt)
             if reply: return reply
 
             if limit == 'unread':
@@ -221,6 +213,33 @@ class service:
               'in <peer>.',
             )
         return reply
+
+    async def handle_command_mark_read(self, peer=None, help=None):
+        if not help:
+            peer_id, reply = self.get_peer_id(peer.lower())
+            if reply: return reply
+
+            await self.tg.telegram_client.send_read_acknowledge(peer_id, clear_mentions=True)
+            reply = ('',)
+        else: # HELP.brief or HELP.desc (first line)
+            reply = ('   mark_read Mark messages as read',)
+        if help == HELP.desc:  # rest of HELP.desc
+            reply += \
+            (
+              '   mark_read <peer>',
+              'Mark all messages on <peer> (channel or user) as read, this also will',
+              'reset the number of mentions to you on <peer>.'
+            )
+        return reply
+
+    def get_peer_id(self, tgt):
+        if tgt in self.irc.users or tgt in self.irc.irc_channels:
+            peer_id = self.tg.get_tid(tgt)
+            reply = None
+        else:
+            peer_id = None
+            reply = ('Unknown user or channel',)
+        return peer_id, reply
 
 class HELP:
     desc = 1
