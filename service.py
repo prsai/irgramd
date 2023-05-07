@@ -57,7 +57,7 @@ class service:
                 reply = ('Code must be numeric',)
 
         else: # HELP.brief or HELP.desc (first line)
-            reply = ('   code      Enter authorization code',)
+            reply = ('   code        Enter authorization code',)
         if help == HELP.desc:  # rest of HELP.desc
             reply += \
             (
@@ -102,7 +102,7 @@ class service:
                              )
 
         else: # HELP.brief or HELP.desc (first line)
-            reply = ('   dialog    Manage conversations (dialogs)',)
+            reply = ('   dialog      Manage conversations (dialogs)',)
         if help == HELP.desc:  # rest of HELP.desc
             reply += \
             (
@@ -121,7 +121,7 @@ class service:
         end_help = ('*** End of Help ***',)
 
         if help == HELP.brief:
-            help_text = ('   help      This help',)
+            help_text = ('   help        This help',)
         elif not help_command or help_command == 'help':
             help_text = start_help
             help_text += \
@@ -200,7 +200,7 @@ class service:
             return reply
 
         else: # HELP.brief or HELP.desc (first line)
-            reply = ('   history   Get messages from history',)
+            reply = ('   history     Get messages from history',)
         if help == HELP.desc:  # rest of HELP.desc
             reply += \
             (
@@ -222,7 +222,7 @@ class service:
             await self.tg.telegram_client.send_read_acknowledge(peer_id, clear_mentions=True)
             reply = ('',)
         else: # HELP.brief or HELP.desc (first line)
-            reply = ('   mark_read Mark messages as read',)
+            reply = ('   mark_read   Mark messages as read',)
         if help == HELP.desc:  # rest of HELP.desc
             reply += \
             (
