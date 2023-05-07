@@ -112,15 +112,16 @@ def get_human_duration(duration):
     if s > 0: res += str(s) + 's'
     return res
 
-def compact_date(date):
+def compact_date(date, tz):
     delta = datetime.datetime.now(datetime.timezone.utc) - date
+    date_local = date.astimezone(zoneinfo.ZoneInfo(tz))
 
     if delta.days < 1:
-        compact_date = date.strftime('%H:%M')
+        compact_date = date_local.strftime('%H:%M')
     elif delta.days < 365:
-        compact_date = date.strftime('%d-%b')
+        compact_date = date_local.strftime('%d-%b')
     else:
-        compact_date = date.strftime('%Y')
+        compact_date = date_local.strftime('%Y')
 
     return compact_date
 

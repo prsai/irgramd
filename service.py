@@ -88,7 +88,7 @@ class service:
                     ty = self.tg.get_entity_type(dialog.entity, format='short')
                     pin = 'Yes' if dialog.pinned else 'No'
                     arch = 'Yes' if dialog.archived else 'No'
-                    last = compact_date(dialog.date)
+                    last = compact_date(dialog.date, self.tg.timezone)
                     if id == self.tg.id:
                         name_in_irc = self.tmp_ircnick
                     else:
