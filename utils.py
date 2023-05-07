@@ -150,8 +150,10 @@ def get_highlighted(a, b):
             elif i == '  ' or i == '+ ':
                 res += ' '
                 continue
+            # deletion of words
             elif i[0] == '-':
-                res += '.{}. '.format(i[2:])
+                res += '-{}- '.format(i[2:])
+            # addition of words
             elif i[0] == '+':
                 res += '_{}_ '.format(i[2:])
             else:
