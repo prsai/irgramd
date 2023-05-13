@@ -15,6 +15,7 @@ class service:
         { # Command         Handler                       Arguments  Min Max
             'code':        (self.handle_command_code,                 1,  1),
             'dialog':      (self.handle_command_dialog,               1,  2),
+            'get':         (self.handle_command_get,                  2,  2),
             'help':        (self.handle_command_help,                 0,  1),
             'history':     (self.handle_command_history,              1,  3),
             'mark_read':   (self.handle_command_mark_read,            1,  1),
@@ -112,6 +113,30 @@ class service:
               '   archive <id>   Archive the dialog specified by id',
               '   delete <id>    Delete the dialog specified by id',
               '   list           Show all dialogs',
+            )
+        return reply
+
+    async def handle_command_get(self, peer=None, mid=None, help=None):
+        if not help:
+            id = self.tg.mid.id_to_num_offset(mid)
+            peer_id, reply = self.get_peer_id(peer.lower())
+            if reply: return reply
+
+            msg = await self.tg.telegram_client.get_messages(entity=peer_id, ids=id)
+            if msg is None:
+                reply = ('Message not found',)
+                return reply
+            await self.tg.handle_telegram_message(event=None, message=msg, history=True)
+            reply = ()
+            return reply
+
+        else: # HELP.brief or HELP.desc (first line)
+            reply = ('   get         Get a message by id and peer',)
+        if help == HELP.desc:  # rest of HELP.desc
+            reply += \
+            (
+              '   get <peer> <compact_id>',
+              'Get one message from peer with the compact ID',
             )
         return reply
 

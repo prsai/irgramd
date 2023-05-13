@@ -762,3 +762,11 @@ class mesg_id:
             return sum + aux
         else:
             return 0
+
+    def id_to_num_offset(self, mid):
+        if self.mesg_base is not None:
+            id_rel = self.id_to_num(mid)
+            id = id_rel + self.mesg_base
+        else:
+            id = None
+        return id
