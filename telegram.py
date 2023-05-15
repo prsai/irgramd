@@ -374,7 +374,7 @@ class TelegramHandler(object):
         self.logger.debug('Handling Telegram Message Edited: %s', event)
 
         id = event.message.id
-        mid = self.mid.num_to_id_offset(id)
+        mid = self.mid.num_to_id_offset(event.message.peer_id, id)
         fmid = '[{}]'.format(mid)
         message = e.replace_mult(event.message.message, e.emo)
         message_rendered = await self.render_text(event.message, mid, upd_to_webpend=None)
@@ -438,8 +438,7 @@ class TelegramHandler(object):
                 chan = self.cache[deleted_id]['channel']
                 await self.relay_telegram_message(message=None, user=user, text=text, channel=chan)
             else:
-                mid = self.mid.num_to_id_offset(deleted_id)
-                text = 'Message id {} deleted not in cache'.format(mid)
+                text = 'Message id {} deleted not in cache'.format(deleted_id)
                 await self.relay_telegram_private_message(self.irc.service_user, text)
 
     async def handle_raw(self, update):
@@ -456,7 +455,7 @@ class TelegramHandler(object):
         msg = event.message if event else message
 
         user = self.get_irc_user_from_telegram(msg.sender_id)
-        mid = self.mid.num_to_id_offset(msg.id)
+        mid = self.mid.num_to_id_offset(msg.peer_id, msg.id)
         text = await self.render_text(msg, mid, upd_to_webpend)
         text_send = self.set_history_timestamp(text, history, msg.date)
         chan = await self.relay_telegram_message(msg, user, text_send)
@@ -555,7 +554,7 @@ class TelegramHandler(object):
         replied = await message.get_reply_message()
         replied_msg = replied.message
         if not replied_msg:
-            replied_msg = '[{}]'.format(self.mid.num_to_id_offset(replied.id))
+            replied_msg = '[{}]'.format(self.mid.num_to_id_offset(replied.peer_id, replied.id))
         elif len(replied_msg) > self.quote_len:
             replied_msg = replied_msg[:self.quote_len]
             trunc = '...'
@@ -738,7 +737,7 @@ class mesg_id:
         self.alpha = alpha
         self.base = len(alpha)
         self.alphaval = { i:v for v, i in enumerate(alpha) }
-        self.mesg_base = None
+        self.mesg_base = {}
 
     def num_to_id(self, num, neg=''):
         if num < 0: return self.num_to_id(-num, '-')
@@ -749,10 +748,11 @@ class mesg_id:
         else:
             return neg + self.alpha[high] + self.alpha[low]
 
-    def num_to_id_offset(self, num):
-        if self.mesg_base is None:
-            self.mesg_base = num
-        return self.num_to_id(num - self.mesg_base)
+    def num_to_id_offset(self, peer, num):
+        peer_id = self.get_peer_id(peer)
+        if peer_id not in self.mesg_base:
+            self.mesg_base[peer_id] = num
+        return self.num_to_id(num - self.mesg_base[peer_id])
 
     def id_to_num(self, id, n=1):
         if id:
@@ -763,10 +763,22 @@ class mesg_id:
         else:
             return 0
 
-    def id_to_num_offset(self, mid):
-        if self.mesg_base is not None:
+    def id_to_num_offset(self, peer, mid):
+        peer_id = self.get_peer_id(peer)
+        if peer_id in self.mesg_base:
             id_rel = self.id_to_num(mid)
-            id = id_rel + self.mesg_base
+            id = id_rel + self.mesg_base[peer_id]
         else:
             id = None
+        return id
+
+    def get_peer_id(self, peer):
+        if isinstance(peer, tgty.PeerChannel):
+            id = peer.channel_id
+        elif isinstance(peer, tgty.PeerChat):
+            id = peer.chat_id
+        elif isinstance(peer, tgty.PeerUser):
+            id = peer.user_id
+        else:
+            id = peer
         return id

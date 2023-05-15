@@ -409,7 +409,7 @@ class IRCHandler(object):
             telegram_id = self.iid_to_tid[tgt]
             tg_msg = await self.tg.telegram_client.send_message(telegram_id, message)
 
-            mid = self.tg.mid.num_to_id_offset(tg_msg.id)
+            mid = self.tg.mid.num_to_id_offset(telegram_id, tg_msg.id)
             text = '[{}] {}'.format(mid, message)
             self.tg.to_cache(tg_msg.id, mid, text, message, user, chan, media=None)
 

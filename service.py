@@ -118,10 +118,10 @@ class service:
 
     async def handle_command_get(self, peer=None, mid=None, help=None):
         if not help:
-            id = self.tg.mid.id_to_num_offset(mid)
             peer_id, reply = self.get_peer_id(peer.lower())
             if reply: return reply
 
+            id = self.tg.mid.id_to_num_offset(peer_id, mid)
             msg = await self.tg.telegram_client.get_messages(entity=peer_id, ids=id)
             if msg is None:
                 reply = ('Message not found',)
