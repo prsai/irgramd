@@ -370,13 +370,34 @@ class TelegramHandler(object):
                            'media': media
                          }
 
+    def replace_mentions(self, text):
+        def repl_mentioned(text):
+            if text and text[0] == '@':
+                part = text[1:].lower()
+                if part in self.irc.users:
+                    return '{}{}{}'.format('~', self.irc.users[part].irc_nick, '~')
+            return text
+
+        if text.find('@') != -1:
+            words = text.split(' ')
+            words_replaced = [repl_mentioned(elem) for elem in words]
+            text_replaced = ' '.join(words_replaced)
+        else:
+            text_replaced = text
+        return text_replaced
+
+    def filters(self, text):
+        filtered = e.replace_mult(text, e.emo)
+        filtered = self.replace_mentions(filtered)
+        return filtered
+
     async def handle_telegram_edited(self, event):
         self.logger.debug('Handling Telegram Message Edited: %s', event)
 
         id = event.message.id
         mid = self.mid.num_to_id_offset(event.message.peer_id, id)
         fmid = '[{}]'.format(mid)
-        message = e.replace_mult(event.message.message, e.emo)
+        message = self.filters(event.message.message)
         message_rendered = await self.render_text(event.message, mid, upd_to_webpend=None)
 
         edition_case, reaction = await self.edition_case(event.message)
@@ -384,7 +405,7 @@ class TelegramHandler(object):
             action = 'Edited'
             user = self.get_irc_user_from_telegram(event.sender_id)
             if id in self.cache:
-                t = e.replace_mult(self.cache[id]['text'], e.emo)
+                t = self.filters(self.cache[id]['text'])
                 rt = self.cache[id]['rendered_text']
 
                 ht, is_ht = get_highlighted(t, message)
@@ -480,7 +501,7 @@ class TelegramHandler(object):
             refwd_text = ''
 
         final_text = '[{}] {}{}'.format(mid, refwd_text, text)
-        final_text = e.replace_mult(final_text, e.emo)
+        final_text = self.filters(final_text)
         return final_text
 
     def set_history_timestamp(self, text, history, date):
