@@ -646,12 +646,12 @@ class TelegramHandler(object):
             media_type = 'contact'
             caption = ''
             to_download = False
-            if message.media.contact.first_name:
-                media_url_or_data += message.media.contact.first_name + ' '
-            if message.media.contact.last_name:
-                media_url_or_data += message.media.contact.last_name + ' '
-            if message.media.contact.phone_number:
-                media_url_or_data += message.media.contact.phone_number
+            if message.media.first_name:
+                media_url_or_data += message.media.first_name + ' '
+            if message.media.last_name:
+                media_url_or_data += message.media.last_name + ' '
+            if message.media.phone_number:
+                media_url_or_data += message.media.phone_number
 
         elif message.game:
             media_type = 'game'
