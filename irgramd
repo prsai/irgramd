@@ -78,6 +78,7 @@ if __name__ == '__main__':
     tornado.options.define('irc_nicks', type=str, multiple=True, metavar='nick,..', help='List of nicks allowed for IRC, if `pam` and optionally `pam_group` are set, PAM authentication will be used instead')
     tornado.options.define('irc_password', default='', metavar='PASSWORD', help='Password for IRC authentication, if `pam` is set, PAM authentication will be used instead')
     tornado.options.define('irc_port', type=int, default=None, metavar='PORT', help='Port to listen on for IRC. (default 6667, default with TLS 6697)')
+    tornado.options.define('media_dir', default=None, metavar='PATH', help='Directory where Telegram media files are downloaded, default "media" in `config_dir`')
     tornado.options.define('media_url', default=None, metavar='BASE_URL', help='Base URL for media files, should be configured in the external (to irgramd) webserver')
     tornado.options.define('pam', default=False, help='Use PAM for IRC authentication, if not set you should set `irc_password`')
     tornado.options.define('pam_group', default=None, metavar='GROUP', help='Unix group allowed if `pam` enabled, if empty any user is allowed')
