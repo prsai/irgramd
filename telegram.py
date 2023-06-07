@@ -200,18 +200,27 @@ class TelegramHandler(object):
         if nick == self.tg_username: return None
         return self.irc.users[nick.lower()]
 
-    def get_irc_nick_from_telegram_forward(self, fwd):
-        if fwd.from_id is None:
+    async def get_irc_name_from_telegram_forward(self, fwd, saved):
+        from_id = fwd.saved_from_peer if saved else fwd.from_id
+        if from_id is None:
             # telegram user has privacy options to show only the name
-            nick = fwd.from_name
+            # or was a broadcast from a channel (no user)
+            name = fwd.from_name
         else:
-            user = self.get_irc_user_from_telegram(fwd.from_id.user_id)
-            if user is None:
-                nick = '{}'
-                self.refwd_me = True
+            peer_id, type = self.get_peer_id_and_type(from_id)
+            if type == 'user':
+                user = self.get_irc_user_from_telegram(peer_id)
+                if user is None:
+                    name = '{}'
+                    self.refwd_me = True
+                else:
+                    name = user.irc_nick
             else:
-                nick = user.irc_nick
-        return nick
+                try:
+                    name = await self.get_irc_channel_from_telegram_id(peer_id)
+                except:
+                    name = ''
+        return name
 
     async def get_irc_nick_from_telegram_id(self, tid, entity=None):
         if tid not in self.tid_to_iid:
@@ -317,6 +326,21 @@ class TelegramHandler(object):
                 long = 'Broadcast Gigagroup Channel'
 
         return short if format == 'short' else long
+
+    def get_peer_id_and_type(self, peer):
+        if isinstance(peer, tgty.PeerChannel):
+            id = peer.channel_id
+            type = 'chan'
+        elif isinstance(peer, tgty.PeerChat):
+            id = peer.chat_id
+            type = 'chan'
+        elif isinstance(peer, tgty.PeerUser):
+            id = peer.user_id
+            type = 'user'
+        else:
+            id = peer
+            type = ''
+        return id, type
 
     async def is_bot(self, irc_nick, tid=None):
         user = self.irc.users[irc_nick]
@@ -590,20 +614,21 @@ class TelegramHandler(object):
         return '|Re {}: {}{}| '.format(replied_nick, replied_msg, trunc)
 
     async def handle_telegram_forward(self, message):
-        forwarded_nick = self.get_irc_nick_from_telegram_forward(message.fwd_from)
-        forwarded_peer = message.fwd_from.saved_from_peer
-        if isinstance(forwarded_peer, tgty.PeerChannel):
-            dest = ' ' + await self.get_irc_channel_from_telegram_id(forwarded_peer.channel_id)
-        elif isinstance(forwarded_peer, tgty.PeerChat):
-            dest = ' ' + await self.get_irc_channel_from_telegram_id(forwarded_peer.chat_id)
+        space = space2 = ' '
+        if not (forwarded_peer_name := await self.get_irc_name_from_telegram_forward(message.fwd_from, saved=False)):
+            space = ''
+        saved_peer_name = await self.get_irc_name_from_telegram_forward(message.fwd_from, saved=True)
+        if saved_peer_name and saved_peer_name != forwarded_peer_name:
+            secondary_name = saved_peer_name
         else:
             # if it's from me I want to know who was the destination of a message (user)
             if self.refwd_me:
-               dest = ' ' + self.get_irc_user_from_telegram(forwarded_peer.user_id).irc_nick
+               secondary_name = self.get_irc_user_from_telegram(message.fwd_from.saved_from_peer.user_id).irc_nick
             else:
-               dest = ''
+               secondary_name = ''
+               space2 = ''
 
-        return '|Fwd {}{}| '.format(forwarded_nick, dest)
+        return '|Fwd{}{}{}{}| '.format(space, forwarded_peer_name, space2, secondary_name)
 
     async def handle_telegram_media(self, message):
         caption = ' | {}'.format(message.message) if message.message else ''
