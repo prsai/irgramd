@@ -468,6 +468,9 @@ class IRCHandler(object):
         tgt = target if target else user.irc_nick
         if self.tg.refwd_me:
              msg = msg.format(user.irc_nick)
+        # replace self @username and other mentions for self messages sent by this instance of irgramd
+        msg = self.tg.replace_mentions(msg, user.irc_nick)
+
         await self.send_irc_command(user, ':{} PRIVMSG {} :{}'.format(src_mask, tgt, msg))
 
     async def reply_command(self, user, prfx, comm, params):

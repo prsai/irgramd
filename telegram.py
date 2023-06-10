@@ -395,17 +395,22 @@ class TelegramHandler(object):
                            'media': media
                          }
 
-    def replace_mentions(self, text):
-        def repl_mentioned(text):
+    def replace_mentions(self, text, me_nick=''):
+        def repl_mentioned(text, me_nick):
             if text and text[0] == '@':
                 part = text[1:].lower()
+                if me_nick and part == self.tg_username:
+                    return replacement(me_nick)
                 if part in self.irc.users:
-                    return '{}{}{}'.format('~', self.irc.users[part].irc_nick, '~')
+                    return replacement(self.irc.users[part].irc_nick)
             return text
+
+        def replacement(nick):
+            return '{}{}{}'.format('~',nick, '~')
 
         if text.find('@') != -1:
             words = text.split(' ')
-            words_replaced = [repl_mentioned(elem) for elem in words]
+            words_replaced = [repl_mentioned(elem, me_nick) for elem in words]
             text_replaced = ' '.join(words_replaced)
         else:
             text_replaced = text
