@@ -145,7 +145,7 @@ class TelegramHandler(object):
             tg_nick = self.get_telegram_nick(user)
             tg_ni = tg_nick.lower()
             if not user.is_self:
-                irc_user = IRCUser(None, ('Telegram',), tg_nick, user.id, self.get_telegram_display_name(user))
+                irc_user = IRCUser(None, ('Telegram',''), tg_nick, user.id, self.get_telegram_display_name(user))
                 self.irc.users[tg_ni] = irc_user
             self.tid_to_iid[user.id] = tg_nick
             self.irc.iid_to_tid[tg_ni] = user.id

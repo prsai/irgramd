@@ -140,7 +140,7 @@ class IRCHandler(object):
         self.irc_channels_founder = collections.defaultdict(set)
         self.start_time   = time.strftime('%a %d %b %Y %H:%M:%S %z')
 
-        self.service_user = IRCUser(None, ('Services',), self.conf['service_user'],
+        self.service_user = IRCUser(None, ('Services',''), self.conf['service_user'],
                                     'Control', 'Telegram Service', is_service=True)
         self.users[self.conf['service_user'].lower()] = self.service_user
 
@@ -427,6 +427,8 @@ class IRCHandler(object):
 
     # IRC functions
     async def register(self, user):
+        self.logger.info('Registered IRC user "%s" from %s:%s', user.irc_nick, user.address, user.port)
+
         user.registered = True
         await self.send_greeting(user)
         await self.send_help(user)
@@ -640,6 +642,7 @@ class IRCUser(object):
     def __init__(self, stream, address, irc_nick=None, username='', realname=None, is_service=False):
         self.stream  = stream
         self.address = address[0]
+        self.port = str(address[1])
         self.from_localhost = True if address[0].split('.')[0] == '127' else False
         self.irc_nick = irc_nick
         self.irc_username = str(username)
