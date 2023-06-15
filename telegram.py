@@ -395,22 +395,40 @@ class TelegramHandler(object):
                            'media': media
                          }
 
-    def replace_mentions(self, text, me_nick=''):
-        def repl_mentioned(text, me_nick):
-            if text and text[0] == '@':
-                part = text[1:].lower()
+    def replace_mentions(self, text, me_nick='', received=True):
+        # For received replace @mention to ~mention~
+        # For sent replace mention: to @mention
+        rargs = {}
+        def repl_mentioned(text, me_nick, received, mark, index, rargs):
+            if text and text[index] == mark:
+                if received:
+                    subtext = text[1:]
+                else:
+                    subtext = text[:-1]
+                part = subtext.lower()
                 if me_nick and part == self.tg_username:
-                    return replacement(me_nick)
+                    return replacement(me_nick, **rargs)
                 if part in self.irc.users:
-                    return replacement(self.irc.users[part].irc_nick)
+                    return replacement(self.irc.users[part].irc_nick, **rargs)
             return text
 
-        def replacement(nick):
-            return '{}{}{}'.format('~',nick, '~')
+        def replacement(nick, repl_pref, repl_suff):
+            return '{}{}{}'.format(repl_pref, nick, repl_suff)
 
-        if text.find('@') != -1:
+        if received:
+            mark = '@'
+            index = 0
+            rargs['repl_pref'] = '~'
+            rargs['repl_suff'] = '~'
+        else:
+            mark = ':'
+            index = -1
+            rargs['repl_pref'] = '@'
+            rargs['repl_suff'] = ''
+
+        if text.find(mark) != -1:
             words = text.split(' ')
-            words_replaced = [repl_mentioned(elem, me_nick) for elem in words]
+            words_replaced = [repl_mentioned(elem, me_nick, received, mark, index, rargs) for elem in words]
             text_replaced = ' '.join(words_replaced)
         else:
             text_replaced = text

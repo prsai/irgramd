@@ -406,6 +406,7 @@ class IRCHandler(object):
             tgt = tgl
 
         if tgt in self.iid_to_tid:
+            message = self.tg.replace_mentions(message, me_nick='', received=False)
             telegram_id = self.iid_to_tid[tgt]
             tg_msg = await self.tg.telegram_client.send_message(telegram_id, message)
 
