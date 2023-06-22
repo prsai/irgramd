@@ -6,10 +6,10 @@
 # Use of this source code is governed by a MIT style license that
 # can be found in the LICENSE file included in this project.
 
-from utils import compact_date
+from utils import compact_date, command
 from telethon import utils as tgutils
 
-class service:
+class service(command):
     def __init__(self, settings, telegram):
         self.commands = \
         { # Command         Handler                       Arguments  Min Max
@@ -24,23 +24,6 @@ class service:
         self.tg = telegram
         self.irc = telegram.irc
         self.tmp_ircnick = None
-
-    async def parse_command(self, line, nick):
-
-        words = line.split()
-        command = words.pop(0).lower()
-        self.tmp_ircnick = nick
-        if command in self.commands.keys():
-            handler, min_args, max_args = self.commands[command]
-            num_words = len(words)
-            if num_words < min_args or num_words > max_args:
-                reply = ('Wrong number of arguments',)
-            else:
-                reply = await handler(*words)
-        else:
-            reply = ('Unknown command',)
-
-        return reply
 
     async def handle_command_code(self, code=None, help=None):
         if not help:
