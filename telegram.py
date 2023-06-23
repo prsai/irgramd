@@ -209,12 +209,16 @@ class TelegramHandler(object):
         else:
             peer_id, type = self.get_peer_id_and_type(from_id)
             if type == 'user':
-                user = self.get_irc_user_from_telegram(peer_id)
-                if user is None:
-                    name = '{}'
-                    self.refwd_me = True
+                try:
+                    user = self.get_irc_user_from_telegram(peer_id)
+                except:
+                    name = str(peer_id)
                 else:
-                    name = user.irc_nick
+                    if user is None:
+                        name = '{}'
+                        self.refwd_me = True
+                    else:
+                        name = user.irc_nick
             else:
                 try:
                     name = await self.get_irc_channel_from_telegram_id(peer_id)
