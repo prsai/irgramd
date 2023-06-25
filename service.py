@@ -112,7 +112,7 @@ class service(command):
             if msg is not None:
                 await self.tg.handle_telegram_message(event=None, message=msg, history=True)
             else:
-                reply = ('Message not found',)            
+                reply = ('Message not found',)
             return reply
 
         else: # HELP.brief or HELP.desc (first line)
