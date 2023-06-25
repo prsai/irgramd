@@ -6,19 +6,19 @@
 # Use of this source code is governed by a MIT style license that
 # can be found in the LICENSE file included in this project.
 
-from utils import compact_date, command
+from utils import compact_date, command, HELP
 from telethon import utils as tgutils
 
 class service(command):
     def __init__(self, settings, telegram):
         self.commands = \
-        { # Command         Handler                       Arguments  Min Max
-            'code':        (self.handle_command_code,                 1,  1),
-            'dialog':      (self.handle_command_dialog,               1,  2),
-            'get':         (self.handle_command_get,                  2,  2),
-            'help':        (self.handle_command_help,                 0,  1),
-            'history':     (self.handle_command_history,              1,  3),
-            'mark_read':   (self.handle_command_mark_read,            1,  1),
+        { # Command         Handler                       Arguments  Min Max Maxsplit
+            'code':        (self.handle_command_code,                 1,  1, -1),
+            'dialog':      (self.handle_command_dialog,               1,  2, -1),
+            'get':         (self.handle_command_get,                  2,  2, -1),
+            'help':        (self.handle_command_help,                 0,  1, -1),
+            'history':     (self.handle_command_history,              1,  3, -1),
+            'mark_read':   (self.handle_command_mark_read,            1,  1, -1),
         }
         self.ask_code = settings['ask_code']
         self.tg = telegram
@@ -144,12 +144,20 @@ class service(command):
                 help_text += await handler(help=HELP.brief)
             help_text += \
             (
+              'The commands begining with ! (exclamation) must be used directly',
+              'in channels or chats. The following ! commands are available:',
+            )
+            for command in self.irc.exclam.commands.values():
+                handler = command[0]
+                help_text += await handler(help=HELP.brief)
+            help_text += \
+            (
               'If you need more information about a specific command you can use',
               'help <command>',
             )
             help_text += end_help
-        elif help_command in self.commands.keys():
-            handler = self.commands[help_command][0]
+        elif help_command in (all_commands := dict(**self.commands, **self.irc.exclam.commands)).keys():
+            handler = all_commands[help_command][0]
             help_text = start_help
             help_text += await handler(help=HELP.desc)
             help_text += end_help
@@ -250,7 +258,3 @@ class service(command):
             peer_id = None
             reply = ('Unknown user or channel',)
         return peer_id, reply
-
-class HELP:
-    desc = 1
-    brief = 2

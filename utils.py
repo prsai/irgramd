@@ -23,11 +23,11 @@ SIMPLE_URL = re.compile('http(|s)://[^ ]+')
 
 class command:
     async def parse_command(self, line, nick):
-        words = line.split()
-        command = words.pop(0).lower()
+        command = line.partition(' ')[0].lower()
         self.tmp_ircnick = nick
         if command in self.commands.keys():
-            handler, min_args, max_args = self.commands[command]
+            handler, min_args, max_args, maxsplit = self.commands[command]
+            words = line.split(maxsplit=maxsplit)[1:]
             num_words = len(words)
             if num_words < min_args or num_words > max_args:
                 reply = ('Wrong number of arguments',)
@@ -37,6 +37,10 @@ class command:
             reply = ('Unknown command',)
 
         return reply
+
+class HELP:
+    desc = 1
+    brief = 2
 
 def chunks(iterable, n, fillvalue=None):
     ''' Return iterable consisting of a sequence of n-length chunks '''

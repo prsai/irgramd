@@ -22,6 +22,7 @@ from include import VERSION, CHAN_MAX_LENGHT, NICK_MAX_LENGTH
 from irc_replies import irc_codes
 from utils import chunks, set_replace, split_lines
 from service import service
+from exclam import exclam
 
 # Constants
 
@@ -109,6 +110,7 @@ class IRCHandler(object):
     def set_telegram(self, tg):
         self.tg = tg
         self.service = service(self.conf, self.tg)
+        self.exclam = exclam(self.tg)
 
     # IRC
 
@@ -408,14 +410,18 @@ class IRCHandler(object):
         if tgt in self.iid_to_tid:
             message = self.tg.replace_mentions(message, me_nick='', received=False)
             telegram_id = self.iid_to_tid[tgt]
-            tg_msg = await self.tg.telegram_client.send_message(telegram_id, message)
+            if message[0] == '!':
+                cont, tg_msg = await self.exclam.command(message, telegram_id, user)
+            else:
+                tg_msg = await self.tg.telegram_client.send_message(telegram_id, message)
+                cont = True
+            if cont:
+                mid = self.tg.mid.num_to_id_offset(telegram_id, tg_msg.id)
+                text = '[{}] {}'.format(mid, message)
+                self.tg.to_cache(tg_msg.id, mid, text, message, user, chan, media=None)
 
-            mid = self.tg.mid.num_to_id_offset(telegram_id, tg_msg.id)
-            text = '[{}] {}'.format(mid, message)
-            self.tg.to_cache(tg_msg.id, mid, text, message, user, chan, media=None)
-
-            if defered_send:
-                await defered_send(user, defered_target, text)
+                if defered_send:
+                    await defered_send(user, defered_target, text)
         else:
             await self.reply_code(user, 'ERR_NOSUCHNICK', (target,))
 
