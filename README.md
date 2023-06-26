@@ -40,7 +40,7 @@ several Telegram accounts you will need to run several irgramd instances.
 - Users and channels mapped in IRC
 - Messages (receive, send)
 - Media in messages (receive, download)
-- Replies (receive)
+- Replies (receive, send)
 - Forwards (receive)
 - Deletions (receive)
 - Editions (receive)
