@@ -55,6 +55,15 @@ several Telegram accounts you will need to run several irgramd instances.
 - [telethon] (tested with v1.28.5)
 - [tornado] (tested with v6.1.0)
 - [aioconsole] (tested with v0.6.1)
+- [pyPAM] (optional, tested with v0.4.2-13.4 from deb, [legacy web](https://web.archive.org/web/20110316070059/http://www.pangalactic.org/PyPAM/))
+
+## Notes
+
+PAM authentication: it allows to authenticate IRC users from the system in
+Unix/Linux. The user that executes irgramd must have permissions to use PAM
+(e.g. in Linux be in the shadow group or equivalent).
+The dependency is totally optional, if not use, the module pyPAM is no
+needed.
 
 ## License
 
@@ -75,3 +84,4 @@ can be found in the LICENSE file included in this project.
 [python]: https://www.python.org
 [tornado]: https://www.tornadoweb.org
 [aioconsole]: https://github.com/vxgmichel/aioconsole
+[pyPAM]: https://packages.debian.org/bullseye/python3-pam
