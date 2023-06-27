@@ -61,9 +61,8 @@ several Telegram accounts you will need to run several irgramd instances.
 
 PAM authentication: it allows to authenticate IRC users from the system in
 Unix/Linux. The user that executes irgramd must have permissions to use PAM
-(e.g. in Linux be in the shadow group or equivalent).
-The dependency is totally optional, if not use, the module pyPAM is no
-needed.
+(e.g.  in Linux be in the shadow group or equivalent). The dependency is
+totally optional, if not used, the module pyPAM is not needed.
 
 ## License
 
