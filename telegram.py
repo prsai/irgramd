@@ -63,6 +63,7 @@ class TelegramHandler(object):
         self.webpending = {}
         self.refwd_me = False
         self.cache = collections.OrderedDict()
+        self.sorted_len_usernames = []
         # Set event to be waited by irc.check_telegram_auth()
         self.auth_checked = asyncio.Event()
 
@@ -132,6 +133,7 @@ class TelegramHandler(object):
         tg_user = await self.telegram_client.get_me()
         self.id = tg_user.id
         self.tg_username = self.get_telegram_nick(tg_user)
+        self.add_sorted_len_usernames(self.tg_username)
         self.set_ircuser_from_telegram(tg_user)
         async for dialog in self.telegram_client.iter_dialogs():
             chat = dialog.entity
@@ -147,6 +149,7 @@ class TelegramHandler(object):
             if not user.is_self:
                 irc_user = IRCUser(None, ('Telegram',''), tg_nick, user.id, self.get_telegram_display_name(user))
                 self.irc.users[tg_ni] = irc_user
+                self.add_sorted_len_usernames(tg_ni)
             self.tid_to_iid[user.id] = tg_nick
             self.irc.iid_to_tid[tg_ni] = user.id
         else:
@@ -403,37 +406,50 @@ class TelegramHandler(object):
         # For received replace @mention to ~mention~
         # For sent replace mention: to @mention
         rargs = {}
-        def repl_mentioned(text, me_nick, received, mark, index, rargs):
-            if text and text[index] == mark:
-                if received:
-                    subtext = text[1:]
-                else:
-                    subtext = text[:-1]
-                part = subtext.lower()
-                if me_nick and part == self.tg_username:
-                    return replacement(me_nick, **rargs)
-                if part in self.irc.users:
-                    return replacement(self.irc.users[part].irc_nick, **rargs)
-            return text
+        def repl_mentioned(text, me_nick, received, mark, repl_pref, repl_suff):
+            new_text = text
 
-        def replacement(nick, repl_pref, repl_suff):
-            return '{}{}{}'.format(repl_pref, nick, repl_suff)
+            for user in self.sorted_len_usernames:
+                if user == self.tg_username:
+                    if me_nick:
+                        username = me_nick
+                    else:
+                        continue
+                else:
+                    username = self.irc.users[user].irc_nick
+
+                if received:
+                    mention = mark + user
+                    mention_case = mark + username
+                else: # sent
+                    mention = user + mark
+                    mention_case = username + mark
+                replcmnt = repl_pref + username + repl_suff
+
+                # Start of the text
+                for ment in (mention, mention_case):
+                    if new_text.startswith(ment):
+                        new_text = new_text.replace(ment, replcmnt, 1)
+
+                # Next words (with space as separator)
+                mention = ' ' + mention
+                mention_case = ' ' + mention_case
+                replcmnt = ' ' + replcmnt
+                new_text = new_text.replace(mention, replcmnt).replace(mention_case, replcmnt)
+
+            return new_text
 
         if received:
             mark = '@'
-            index = 0
             rargs['repl_pref'] = '~'
             rargs['repl_suff'] = '~'
-        else:
+        else: # sent
             mark = ':'
-            index = -1
             rargs['repl_pref'] = '@'
             rargs['repl_suff'] = ''
 
         if text.find(mark) != -1:
-            words = text.split(' ')
-            words_replaced = [repl_mentioned(elem, me_nick, received, mark, index, rargs) for elem in words]
-            text_replaced = ' '.join(words_replaced)
+            text_replaced = repl_mentioned(text, me_nick, received, mark, **rargs)
         else:
             text_replaced = text
         return text_replaced
@@ -442,6 +458,10 @@ class TelegramHandler(object):
         filtered = e.replace_mult(text, e.emo)
         filtered = self.replace_mentions(filtered)
         return filtered
+
+    def add_sorted_len_usernames(self, username):
+        self.sorted_len_usernames.append(username)
+        self.sorted_len_usernames.sort(key=lambda k: len(k), reverse=True)
 
     async def handle_telegram_edited(self, event):
         self.logger.debug('Handling Telegram Message Edited: %s', event)
