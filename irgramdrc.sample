@@ -1,0 +1,17 @@
+api_id=XXXXXX
+api_hash='XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+phone='XXXXXXXXXXX'
+#ask_code=True
+#irc_address='0.0.0.0'
+#tls=True
+#tls_cert='/path/to/certificate'
+#tls_key='/path/to/key'
+irc_nicks=['XXXXX', 'XXXXXX']
+media_url='https://server/token/'
+#pam=True
+#pam_group='XXXXX'
+#char_in_encoding='iso-8859-1'
+#char_out_encoding='iso-8859-1'
+#emoji_ascii=True
+hist_timestamp_format='[%m-%d %H:%M]'
+#timezone='Europe/Madrid'
