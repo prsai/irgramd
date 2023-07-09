@@ -57,16 +57,59 @@ several Telegram accounts you will need to run several irgramd instances.
 - [aioconsole] (tested with v0.6.1)
 - [pyPAM] (optional, tested with v0.4.2-13.4 from deb, [legacy web](https://web.archive.org/web/20110316070059/http://www.pangalactic.org/PyPAM/))
 
+## Instalation
+
+### From darcs
+
+    darcs clone https://src.presi.org/repos/darcs/irgramd
+    chmod +x irgramd/irgramd
+
+### From git
+
+    git clone https://github.com/prsai/irgramd.git
+    chmod +x irgramd/irgramd
+
+## Configuration
+
+From irgramd directory `./irgramd --help` will show all configuration
+options available, these options can be used directy in the command line or
+in a file.
+
+When used in command line the separator is `-` (dash) with two leading
+dashes, example: `--api-hash`.
+
+When used in a file the separator is `_` (underscore) without two leading
+dashes nor underscores, example: `api_hash`. The syntax of this file is just
+Python so strings are surrounded by quotes (`'`) and lists by brackets (`[]`).
+
+A sample of the configuration file is provided, copy it to the default
+configuration location:
+
+    mkdir -p  ~/.config/irgramd
+    cp irgramd/irgramdrc.sample ~/.config/irgramd/irgramdrc
+
+And modified it with your API IDs and preferences.
+
+## Usage
+
+From irgramd directory, in foreground:
+
+    ./irgramd
+
+In background (without logs):
+
+    ./irgramd --logging=none &
+
 ## Notes
 
 PAM authentication: it allows to authenticate IRC users from the system in
 Unix/Linux. The user that executes irgramd must have permissions to use PAM
-(e.g.  in Linux be in the shadow group or equivalent). The dependency is
+(e.g. in Linux be in the shadow group or equivalent). The dependency is
 totally optional, if not used, the module pyPAM is not needed.
 
 ## License
 
-Copyright (c) 2019 Peter Bui <pbui@bx612.space>  
+Copyright (c) 2019 Peter Bui <pbui@bx612.space>
 Copyright (c) 2020-2023 E. Bosch <presidev@AT@gmail.com>
 
 Use of this source code is governed by a MIT style license that
