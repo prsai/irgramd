@@ -40,10 +40,10 @@ class exclam(command):
         if not help:
             id, chk_msg = await self.check_msg(cid)
             if chk_msg is not None:
-              self.tmp_tg_msg = await self.tg.telegram_client.send_message(self.tmp_telegram_id, msg, reply_to=id)
-              reply = True
+                self.tmp_tg_msg = await self.tg.telegram_client.send_message(self.tmp_telegram_id, msg, reply_to=id)
+                reply = True
             else:
-              reply = ('Unknown message to reply',)
+                reply = ('Unknown message to reply',)
         else: # HELP.brief or HELP.desc (first line)
             reply = ('   !re         Reply to a message',)
         if help == HELP.desc:  # rest of HELP.desc
@@ -59,17 +59,17 @@ class exclam(command):
         if not help:
             id, ed_msg = await self.check_msg(cid)
             if ed_msg is not None:
-              try:
-                  self.tmp_tg_msg = await self.tg.telegram_client.edit_message(ed_msg, new_msg)
-              except MessageNotModifiedError:
-                  self.tmp_tg_msg = ed_msg
-                  reply = True
-              except MessageAuthorRequiredError:
-                  reply = ('Not the author of the message to edit',)
-              else:
-                  reply = True
+                try:
+                    self.tmp_tg_msg = await self.tg.telegram_client.edit_message(ed_msg, new_msg)
+                except MessageNotModifiedError:
+                    self.tmp_tg_msg = ed_msg
+                    reply = True
+                except MessageAuthorRequiredError:
+                    reply = ('Not the author of the message to edit',)
+                else:
+                    reply = True
             else:
-              reply = ('Unknown message to edit',)
+                reply = ('Unknown message to edit',)
         else: # HELP.brief or HELP.desc (first line)
             reply = ('   !ed         Edit a message',)
         if help == HELP.desc:  # rest of HELP.desc
