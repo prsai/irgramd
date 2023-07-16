@@ -43,7 +43,7 @@ several Telegram accounts you will need to run several irgramd instances.
 - Replies (receive, send)
 - Forwards (receive)
 - Deletions (receive)
-- Editions (receive)
+- Editions (receive, do)
 - Reactions (receive)
 - Dialogs management
 - Authentication and TLS for IRC
@@ -109,7 +109,7 @@ totally optional, if not used, the module pyPAM is not needed.
 
 ## License
 
-Copyright (c) 2019 Peter Bui <pbui@bx612.space>
+Copyright (c) 2019 Peter Bui <pbui@bx612.space> 
 Copyright (c) 2020-2023 E. Bosch <presidev@AT@gmail.com>
 
 Use of this source code is governed by a MIT style license that
