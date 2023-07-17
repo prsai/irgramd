@@ -16,6 +16,7 @@ class exclam(command):
         { # Command         Handler                       Arguments  Min Max Maxsplit
             '!re':        (self.handle_command_re,                    2,  2,  2),
             '!ed':        (self.handle_command_ed,                    2,  2,  2),
+            '!del':       (self.handle_command_del,                   1,  1, -1),
         }
         self.tg = telegram
         self.irc = telegram.irc
@@ -33,7 +34,10 @@ class exclam(command):
 
     async def check_msg(self, cid):
         id = self.tg.mid.id_to_num_offset(self.tmp_telegram_id, cid)
-        chk_msg = await self.tg.telegram_client.get_messages(entity=self.tmp_telegram_id, ids=id)
+        if id is None:
+            chk_msg = None
+        else:
+            chk_msg = await self.tg.telegram_client.get_messages(entity=self.tmp_telegram_id, ids=id)
         return id, chk_msg
 
     async def handle_command_re(self, cid=None, msg=None, help=None):
@@ -78,5 +82,27 @@ class exclam(command):
               '   !ed <compact_id> <new_message>',
               'Edit a message with <compact_id> on current channel/chat,',
               '<new_message> replaces the current message.'
+            )
+        return reply
+
+    async def handle_command_del(self, cid=None, help=None):
+        if not help:
+            id, del_msg = await self.check_msg(cid)
+            if del_msg is not None:
+                deleted = await self.tg.telegram_client.delete_messages(self.tmp_telegram_id, del_msg)
+                if deleted[0].pts_count == 0:
+                    reply = ('Not possible to delete',)
+                else:
+                    self.tmp_tg_msg = None
+                    reply = None
+            else:
+                reply = ('Unknown message to delete',)
+        else: # HELP.brief or HELP.desc (first line)
+            reply = ('   !del        Delete a message',)
+        if help == HELP.desc:  # rest of HELP.desc
+            reply += \
+            (
+              '   !del <compact_id>',
+              'Delete a message with <compact_id> on current channel/chat'
             )
         return reply
