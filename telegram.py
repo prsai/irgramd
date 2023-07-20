@@ -51,6 +51,7 @@ class TelegramHandler(object):
         self.quote_len  = settings['quote_length']
         self.hist_fmt   = settings['hist_timestamp_format']
         self.timezone   = settings['timezone']
+        self.geo_url    = settings['geo_url']
         if not settings['emoji_ascii']:
             e.emo = {}
         self.media_cn   = 0
@@ -737,7 +738,12 @@ class TelegramHandler(object):
             media_type = 'geo'
             caption = ''
             to_download = False
-            media_url_or_data = 'lat: {}, long: {}'.format(message.media.geo.lat, message.media.geo.long)
+            if self.geo_url:
+                geo_url = ' | ' + self.geo_url
+            else:
+                geo_url = ''
+            lat_long_template = 'lat: {lat}, long: {long}' + geo_url
+            media_url_or_data = lat_long_template.format(lat=message.media.geo.lat, long=message.media.geo.long)
 
         elif message.invoice:
             media_type = 'invoice'

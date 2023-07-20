@@ -15,3 +15,7 @@ media_url='https://server/token/'
 #emoji_ascii=True
 hist_timestamp_format='[%m-%d %H:%M]'
 #timezone='Europe/Madrid'
+#geo url OpenStreetMap
+#geo_url='https://osm.org/search?query={lat}%20{long}#map=15'
+#geo url Google Maps
+#geo_url='https://maps.google.com/?q={lat},{long}'
