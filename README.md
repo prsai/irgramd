@@ -42,7 +42,7 @@ several Telegram accounts you will need to run several irgramd instances.
 - Media in messages (receive, download)
 - Replies (receive, send)
 - Forwards (receive)
-- Deletions (receive)
+- Deletions (receive, do)
 - Editions (receive, do)
 - Reactions (receive)
 - Dialogs management
