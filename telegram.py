@@ -644,11 +644,14 @@ class TelegramHandler(object):
                 await self.irc.join_irc_channel(self.irc.irc_nick, channel, full_join=True)
 
     async def handle_telegram_reply(self, message):
+        space = ' '
         trunc = ''
         replied = await message.get_reply_message()
         replied_msg = replied.message
+        cid = self.mid.num_to_id_offset(replied.peer_id, replied.id)
         if not replied_msg:
-            replied_msg = '[{}]'.format(self.mid.num_to_id_offset(replied.peer_id, replied.id))
+            replied_msg = ''
+            space = ''
         elif len(replied_msg) > self.quote_len:
             replied_msg = replied_msg[:self.quote_len]
             trunc = '...'
@@ -659,7 +662,7 @@ class TelegramHandler(object):
         else:
             replied_nick = replied_user.irc_nick
 
-        return '|Re {}: {}{}| '.format(replied_nick, replied_msg, trunc)
+        return '|Re {}: [{}]{}{}{}| '.format(replied_nick, cid, space, replied_msg, trunc)
 
     async def handle_telegram_forward(self, message):
         space = space2 = ' '
