@@ -46,6 +46,7 @@ several Telegram accounts you will need to run several irgramd instances.
 - Editions (receive, do)
 - Reactions (receive)
 - Dialogs management
+- History
 - Authentication and TLS for IRC
 - Multiple connections from IRC
 
