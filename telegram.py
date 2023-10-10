@@ -758,7 +758,7 @@ class TelegramHandler(object):
             media_type = 'poll'
             caption = ''
             to_download = False
-            media_url_or_data = ''
+            media_url_or_data = self.handle_poll(message.media.poll)
 
         elif message.venue:
             media_type = 'venue'
@@ -775,6 +775,12 @@ class TelegramHandler(object):
             media_url_or_data = await self.download_telegram_media(message)
 
         return self.format_media(media_type, media_url_or_data, caption)
+
+    def handle_poll(self, poll):
+        text = poll.question
+        for ans in poll.answers:
+            text += '\n* ' + ans.text
+        return text
 
     async def handle_webpage(self, webpage, message):
         media_type = 'web'
