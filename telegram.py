@@ -38,6 +38,7 @@ class TelegramHandler(object):
     def __init__(self, irc, settings):
         self.logger     = logging.getLogger()
         self.config_dir = settings['config_dir']
+        self.download   = settings['download_media']
         self.media_dir  = settings['media_dir']
         self.media_url  = settings['media_url']
         self.api_id     = settings['api_id']
@@ -824,7 +825,9 @@ class TelegramHandler(object):
         return '[{}] {}{}'.format(media_type, media_url_or_data, caption)
 
     async def download_telegram_media(self, message):
-        local_path = await message.download_media(self.telegram_media_dir)
+        local_path = None
+        if self.download:
+            local_path = await message.download_media(self.telegram_media_dir)
         if not local_path: return ''
 
         if message.document:
