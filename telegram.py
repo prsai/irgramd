@@ -39,6 +39,7 @@ class TelegramHandler(object):
         self.logger     = logging.getLogger()
         self.config_dir = settings['config_dir']
         self.download   = settings['download_media']
+        self.notice_size = settings['download_notice'] * 1048576
         self.media_dir  = settings['media_dir']
         self.media_url  = settings['media_url']
         self.api_id     = settings['api_id']
@@ -551,7 +552,7 @@ class TelegramHandler(object):
 
         user = self.get_irc_user_from_telegram(msg.sender_id)
         mid = self.mid.num_to_id_offset(msg.peer_id, msg.id)
-        text = await self.render_text(msg, mid, upd_to_webpend)
+        text = await self.render_text(msg, mid, upd_to_webpend, user)
         text_send = self.set_history_timestamp(text, history, msg.date)
         chan = await self.relay_telegram_message(msg, user, text_send)
 
@@ -559,11 +560,11 @@ class TelegramHandler(object):
 
         self.refwd_me = False
 
-    async def render_text(self, message, mid, upd_to_webpend, history=False):
+    async def render_text(self, message, mid, upd_to_webpend, user=None):
         if upd_to_webpend:
             text = await self.handle_webpage(upd_to_webpend, message)
         elif message.media:
-            text = await self.handle_telegram_media(message)
+            text = await self.handle_telegram_media(message, user, mid)
         else:
             text = message.message
 
@@ -682,10 +683,11 @@ class TelegramHandler(object):
 
         return '|Fwd{}{}{}{}| '.format(space, forwarded_peer_name, space2, secondary_name)
 
-    async def handle_telegram_media(self, message):
+    async def handle_telegram_media(self, message, user, mid):
         caption = ' | {}'.format(message.message) if message.message else ''
         to_download = True
         media_url_or_data = ''
+        size = 0
 
         if isinstance(message.media, tgty.MessageMediaWebPage):
             to_download = False
@@ -702,24 +704,30 @@ class TelegramHandler(object):
                 media_url_or_data = message.message
                 caption = ''
         elif message.photo:
-            size = message.media.photo.sizes[-1]
-            if hasattr(size, 'w') and hasattr(size, 'h'):
-                media_type = 'photo:{}x{}'.format(size.w, size.h)
+            ph_size = message.media.photo.sizes[-1]
+            if isinstance(ph_size, tgty.PhotoSizeProgressive):
+                size = ph_size.sizes[-1]
+            else:
+                size = ph_size.size
+            if hasattr(ph_size, 'w') and hasattr(ph_size, 'h'):
+                media_type = 'photo:{}x{}'.format(ph_size.w, ph_size.h)
             else:
                 media_type = 'photo'
         elif message.audio:        media_type = 'audio'
         elif message.voice:        media_type = 'rec'
         elif message.video:
-            size = get_human_size(message.media.document.size)
+            size = message.media.document.size
+            h_size = get_human_size(size)
             attrib = next(x for x in message.media.document.attributes if isinstance(x, tgty.DocumentAttributeVideo))
             dur = get_human_duration(attrib.duration)
-            media_type = 'video:{},{}'.format(size, dur)
+            media_type = 'video:{},{}'.format(h_size, dur)
         elif message.video_note:   media_type = 'videorec'
         elif message.gif:          media_type = 'anim'
         elif message.sticker:      media_type = 'sticker'
         elif message.document:
-            size = get_human_size(message.media.document.size)
-            media_type = 'file:{}'.format(size)
+            size = message.media.document.size
+            h_size = get_human_size(size)
+            media_type = 'file:{}'.format(h_size)
         elif message.contact:
             media_type = 'contact'
             caption = ''
@@ -773,6 +781,9 @@ class TelegramHandler(object):
             media_url_or_data = message.message
 
         if to_download:
+            if self.download and size > self.notice_size:
+                await self.relay_telegram_message(message, user, '[{}] [{}] [Downloading]'.format(mid, media_type))
+
             media_url_or_data = await self.download_telegram_media(message)
 
         return self.format_media(media_type, media_url_or_data, caption)

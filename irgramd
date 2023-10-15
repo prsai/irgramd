@@ -74,6 +74,7 @@ if __name__ == '__main__':
     tornado.options.define('config', default='irgramdrc', metavar='CONFIGFILE', help='Config file absolute or relative to `config_dir` (command line options override it)')
     tornado.options.define('config_dir', default='~/.config/irgramd', metavar='PATH', help='Configuration directory where telegram session info is saved')
     tornado.options.define('download_media', default=True, help='Enable download of any media (photos, documents, etc.), if not set only a message of media will be shown')
+    tornado.options.define('download_notice', default=10, metavar='SIZE (MiB)', help='Enable a notice when a download starts if its size is greater than SIZE, this is useful when a download takes some time to be completed')
     tornado.options.define('emoji_ascii', default=False, help='Replace emoji with ASCII emoticons')
     tornado.options.define('geo_url', type=str, default=None, metavar='TEMPLATE_URL', help='Use custom URL for showing geo latitude/longitude location, eg. OpenStreetMap')
     tornado.options.define('hist_timestamp_format', metavar='DATETIME_FORMAT', help='Format string for timestamps in history, see https://www.strfti.me')
