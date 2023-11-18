@@ -177,7 +177,7 @@ def get_highlighted(a, b):
                 res += '-{}- '.format(i[2:])
             # addition of words
             elif i[0] == '+':
-                res += '_{}_ '.format(i[2:])
+                res += '+{}+ '.format(i[2:])
             else:
                 res += '{} '.format(i[2:])
                 eq += 1
