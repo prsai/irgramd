@@ -470,6 +470,10 @@ class IRCHandler(object):
         for irc_user in irc_users:
             await self.send_privmsg(irc_user, source_mask, target, message)
 
+    async def send_action(self, source, target, message):
+        action_message = '\x01ACTION {}\x01'.format(message)
+        await self.send_msg(source, target, action_message)
+
     async def send_privmsg(self, user, source_mask, target, msg):
         # reference [1]
         src_mask = source_mask if source_mask else user.get_irc_mask()

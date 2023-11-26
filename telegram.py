@@ -553,7 +553,7 @@ class TelegramHandler(object):
         user = self.get_irc_user_from_telegram(msg.sender_id)
         mid = self.mid.num_to_id_offset(msg.peer_id, msg.id)
         text = await self.render_text(msg, mid, upd_to_webpend, user)
-        text_send = self.set_history_timestamp(text, history, msg.date)
+        text_send = self.set_history_timestamp(text, history, msg.date, msg.action)
         chan = await self.relay_telegram_message(msg, user, text_send)
 
         self.to_cache(msg.id, mid, msg.message, text, user, chan, msg.media)
@@ -568,7 +568,10 @@ class TelegramHandler(object):
         else:
             text = message.message
 
-        if message.is_reply:
+        if message.action:
+            final_text = await self.handle_telegram_action(message)
+            return final_text
+        elif message.is_reply:
             refwd_text = await self.handle_telegram_reply(message)
         elif message.forward:
             refwd_text = await self.handle_telegram_forward(message)
@@ -579,29 +582,36 @@ class TelegramHandler(object):
         final_text = self.filters(final_text)
         return final_text
 
-    def set_history_timestamp(self, text, history, date):
+    def set_history_timestamp(self, text, history, date, action):
         if history and self.hist_fmt:
             timestamp = format_timestamp(self.hist_fmt, self.timezone, date)
-            res = '{} {}'.format(timestamp, text)
+            if action:
+                res = '{} {}'.format(text, timestamp)
+            else:
+                res = '{} {}'.format(timestamp, text)
         else:
             res = text
         return res
 
     async def relay_telegram_message(self, message, user, text, channel=None):
         private = (message and message.is_private) or (not message and not channel)
+        action = (message and message.action)
         if private:
-            await self.relay_telegram_private_message(user, text)
+            await self.relay_telegram_private_message(user, text, action)
             chan = None
         else:
-            chan = await self.relay_telegram_channel_message(message, user, text, channel)
+            chan = await self.relay_telegram_channel_message(message, user, text, channel, action)
         return chan
 
-    async def relay_telegram_private_message(self, user, message):
+    async def relay_telegram_private_message(self, user, message, action=None):
         self.logger.debug('Handling Telegram Private Message: %s, %s', user, message)
 
-        await self.irc.send_msg(user, None, message)
+        if action:
+            await self.irc.send_action(user, None, message)
+        else:
+            await self.irc.send_msg(user, None, message)
 
-    async def relay_telegram_channel_message(self, message, user, text, channel=None):
+    async def relay_telegram_channel_message(self, message, user, text, channel, action):
         self.logger.debug('Handling Telegram Channel Message: %s', message or text)
 
         if message:
@@ -609,7 +619,12 @@ class TelegramHandler(object):
             chan = await self.get_irc_channel_from_telegram_id(message.chat_id, entity)
         else:
             chan = channel
-        await self.irc.send_msg(user, chan, text)
+
+        if action:
+            await self.irc.send_action(user, chan, text)
+        else:
+            await self.irc.send_msg(user, chan, text)
+
         return chan
 
     async def handle_telegram_chat_action(self, event):
@@ -644,6 +659,15 @@ class TelegramHandler(object):
                 self.tid_to_iid[chat.id] = channel
                 self.irc.iid_to_tid[channel] = chat.id
                 await self.irc.join_irc_channel(self.irc.irc_nick, channel, full_join=True)
+
+    async def handle_telegram_action(self, message):
+        if isinstance(message.action, tgty.MessageActionPinMessage):
+            replied = await message.get_reply_message()
+            cid = self.mid.num_to_id_offset(replied.peer_id, replied.id)
+            action_text = 'has pinned message [{}]'.format(cid)
+        else:
+            action_text = ''
+        return action_text
 
     async def handle_telegram_reply(self, message):
         space = ' '
