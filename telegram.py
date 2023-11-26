@@ -665,6 +665,10 @@ class TelegramHandler(object):
             replied = await message.get_reply_message()
             cid = self.mid.num_to_id_offset(replied.peer_id, replied.id)
             action_text = 'has pinned message [{}]'.format(cid)
+        elif isinstance(message.action, tgty.MessageActionChatEditPhoto):
+            _, media_type = self.scan_photo_attributes(message.action.photo)
+            photo_url = await self.download_telegram_media(message)
+            action_text = 'has changed chat [{}] {}'.format(media_type, photo_url)
         else:
             action_text = ''
         return action_text
@@ -742,15 +746,7 @@ class TelegramHandler(object):
                 media_url_or_data = message.message
                 caption = ''
         elif message.photo:
-            ph_size = message.media.photo.sizes[-1]
-            if isinstance(ph_size, tgty.PhotoSizeProgressive):
-                size = ph_size.sizes[-1]
-            else:
-                size = ph_size.size
-            if hasattr(ph_size, 'w') and hasattr(ph_size, 'h'):
-                media_type = 'photo:{}x{}'.format(ph_size.w, ph_size.h)
-            else:
-                media_type = 'photo'
+            size, media_type = self.scan_photo_attributes(message.media.photo)
         elif message.audio:        media_type = 'audio'
         elif message.voice:        media_type = 'rec'
         elif message.video:
@@ -867,6 +863,25 @@ class TelegramHandler(object):
 
     def format_media(self, media_type, media_url_or_data, caption):
         return '[{}] {}{}'.format(media_type, media_url_or_data, caption)
+
+    def scan_photo_attributes(self, photo):
+        size = 0
+        sizes = photo.sizes
+        ph_size = sizes[-1]
+        if isinstance(ph_size, tgty.PhotoSizeProgressive):
+            size = ph_size.sizes[-1]
+        else:
+            for x in sizes:
+                if isinstance(x, tgty.PhotoSize):
+                    if x.size > size:
+                        size = x.size
+                        ph_size = x
+        if hasattr(ph_size, 'w') and hasattr(ph_size, 'h'):
+            media_type = 'photo:{}x{}'.format(ph_size.w, ph_size.h)
+        else:
+            media_type = 'photo'
+
+        return size, media_type
 
     async def download_telegram_media(self, message, filename=None, size=0, relay_attr=None):
         if not self.download:
