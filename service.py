@@ -106,7 +106,12 @@ class service(command):
             if reply: return reply
             else: reply = ()
 
-            id = self.tg.mid.id_to_num_offset(peer_id, mid)
+            # If the ID starts with '=' is absolute ID, not compact ID
+            # character '=' is not used by compact IDs
+            if mid[0] == '=':
+                id = int(mid[1:])
+            else:
+                id = self.tg.mid.id_to_num_offset(peer_id, mid)
             if id is not None:
                 msg = await self.tg.telegram_client.get_messages(entity=peer_id, ids=id)
             if msg is not None:
@@ -120,8 +125,8 @@ class service(command):
         if help == HELP.desc:  # rest of HELP.desc
             reply += \
             (
-              '   get <peer> <compact_id>',
-              'Get one message from peer with the compact ID',
+              '   get <peer> <compact_id|=ID>',
+              'Get one message from peer with the compact or absolute ID',
             )
         return reply
 
