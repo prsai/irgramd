@@ -206,6 +206,13 @@ class TelegramHandler(object):
         if nick == self.tg_username: return None
         return self.irc.users[nick.lower()]
 
+    def get_irc_name_from_telegram_id(self, tid):
+        if tid in self.tid_to_iid.keys():
+            name_in_irc = self.tid_to_iid[tid]
+        else:
+            name_in_irc = '<Unknown>'
+        return name_in_irc
+
     async def get_irc_name_from_telegram_forward(self, fwd, saved):
         from_id = fwd.saved_from_peer if saved else fwd.from_id
         if from_id is None:
@@ -578,7 +585,9 @@ class TelegramHandler(object):
         else:
             refwd_text = ''
 
-        final_text = '[{}] {}{}'.format(mid, refwd_text, text)
+        target_mine = self.handle_target_mine(message.peer_id, user)
+
+        final_text = '[{}] {}{}{}'.format(mid, target_mine, refwd_text, text)
         final_text = self.filters(final_text)
         return final_text
 
@@ -822,6 +831,19 @@ class TelegramHandler(object):
         for ans in poll.answers:
             text += '\n* ' + ans.text
         return text
+
+    def handle_target_mine(self, target, user):
+        # Add the target of messages sent by self user (me)
+        # received in other clients
+        target_id, target_type = self.get_peer_id_and_type(target)
+        if user is None and target_type == 'user' and target_id != self.id:
+           # self user^
+           # as sender
+            irc_id = self.get_irc_name_from_telegram_id(target_id)
+            target_mine = '[T: {}] '.format(irc_id)
+        else:
+            target_mine = ''
+        return target_mine
 
     async def handle_webpage(self, webpage, message):
         media_type = 'web'

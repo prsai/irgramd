@@ -77,10 +77,8 @@ class service(command):
                     if id == self.tg.id:
                         name_in_irc = self.tmp_ircnick
                     else:
-                        if id in self.tg.tid_to_iid.keys():
-                            name_in_irc = self.tg.tid_to_iid[id]
-                        else:
-                            name_in_irc = '<Unknown>'
+                        name_in_irc = self.tg.get_irc_name_from_telegram_id(id)
+
                     reply += (' {:<11d} {:<9d} {:<9d} {:5} {:<3} {:<4} {:<6}  {}'.format(
                                 id,     unr,   men,   ty,  pin,  arch, last, name_in_irc),
                              )
