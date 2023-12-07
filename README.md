@@ -32,7 +32,13 @@ Several IRC clients can connect to irgramd but they will see the same
 Telegram account, this allows connecting to the same Telegram account from
 different IRC clients on different locations or devices, so one irgramd
 instance only connects to one Telegram account, if you want to connect to
-several Telegram accounts you will need to run several irgramd instances.
+several Telegram accounts you will need to run several irgramd instances. If
+all IRC clients are disconnected, irgramd will remain connected to Telegram.
+
+irgramd can also be seen as a kind of bouncer ([BNC]), with the difference
+that instead of talking IRC protocol on the client side, it talks Telegram
+protocol (MTProto), and can hide the IP and location of the IRC client (if
+executed in a different host).
 
 ## Features
 
@@ -130,3 +136,4 @@ can be found in the LICENSE file included in this project.
 [tornado]: https://www.tornadoweb.org
 [aioconsole]: https://github.com/vxgmichel/aioconsole
 [pyPAM]: https://packages.debian.org/bullseye/python3-pam
+[BNC]: https://en.wikipedia.org/wiki/BNC_(software)
