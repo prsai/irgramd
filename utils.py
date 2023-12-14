@@ -130,7 +130,7 @@ def get_human_duration(duration):
 
     if h > 0: res = str(h) + 'h'
     if m > 0: res += str(m) + 'm'
-    if s > 0: res += str(s) + 's'
+    if s > 0 or duration < 60: res += str(s) + 's'
     return res
 
 def compact_date(date, tz):

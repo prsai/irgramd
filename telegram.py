@@ -728,17 +728,17 @@ class TelegramHandler(object):
         filename = None
 
         def scan_doc_attributes(document):
-            attrib_file = attrib_video = filename = None
+            attrib_file = attrib_av = filename = None
             size = document.size
             h_size = get_human_size(size)
             for x in document.attributes:
-                if isinstance(x, tgty.DocumentAttributeVideo):
-                    attrib_video = x
+                if isinstance(x, tgty.DocumentAttributeVideo) or isinstance(x, tgty.DocumentAttributeAudio):
+                    attrib_av = x
                 if isinstance(x, tgty.DocumentAttributeFilename):
                     attrib_file = x
             filename = attrib_file.file_name if attrib_file else None
 
-            return size, h_size, attrib_video, filename
+            return size, h_size, attrib_av, filename
 
         if isinstance(message.media, tgty.MessageMediaWebPage):
             to_download = False
@@ -756,8 +756,17 @@ class TelegramHandler(object):
                 caption = ''
         elif message.photo:
             size, media_type = self.scan_photo_attributes(message.media.photo)
-        elif message.audio:        media_type = 'audio'
-        elif message.voice:        media_type = 'rec'
+        elif message.audio:
+            size, h_size, attrib_audio, filename = scan_doc_attributes(message.media.document)
+            dur = get_human_duration(attrib_audio.duration) if attrib_audio else ''
+            per = attrib_audio.performer or ''
+            tit = attrib_audio.title or ''
+            theme = ',{}/{}'.format(per, tit) if per or tit else ''
+            media_type = 'audio:{},{}{}'.format(h_size, dur, theme)
+        elif message.voice:
+            size, _, attrib_audio, filename = scan_doc_attributes(message.media.document)
+            dur = get_human_duration(attrib_audio.duration) if attrib_audio else ''
+            media_type = 'rec:{}'.format(dur)
         elif message.video:
             size, h_size, attrib_video, filename = scan_doc_attributes(message.media.document)
             dur = get_human_duration(attrib_video.duration) if attrib_video else ''
