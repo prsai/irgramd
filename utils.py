@@ -83,6 +83,15 @@ def split_lines(message):
 def sanitize_filename(fn):
     return FILENAME_INVALID_CHARS.sub('', fn).strip('-').replace(' ','_')
 
+def add_filename(filename, add):
+    if add:
+        aux = filename.rsplit('.', 1)
+        name = aux[0]
+        ext = aux[1]
+        return '{}-{}.{}'.format(name, add, ext)
+    else:
+        return filename
+
 def remove_slash(url):
     return url[:-1] if url[-1:] == '/' else url
 

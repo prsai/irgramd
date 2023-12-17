@@ -22,7 +22,7 @@ from telethon.tl.functions.messages import GetMessagesReactionsRequest
 
 from include import CHAN_MAX_LENGHT, NICK_MAX_LENGTH
 from irc import IRCUser
-from utils import sanitize_filename, is_url_equiv, extract_url, get_human_size, get_human_duration, get_highlighted, fix_braces, format_timestamp
+from utils import sanitize_filename, add_filename, is_url_equiv, extract_url, get_human_size, get_human_duration, get_highlighted, fix_braces, format_timestamp
 import emoji2emoticon as e
 
 # Test IP table
@@ -569,14 +569,14 @@ class TelegramHandler(object):
 
     async def render_text(self, message, mid, upd_to_webpend, user=None):
         if upd_to_webpend:
-            text = await self.handle_webpage(upd_to_webpend, message)
+            text = await self.handle_webpage(upd_to_webpend, message, mid)
         elif message.media:
             text = await self.handle_telegram_media(message, user, mid)
         else:
             text = message.message
 
         if message.action:
-            final_text = await self.handle_telegram_action(message)
+            final_text = await self.handle_telegram_action(message, mid)
             return final_text
         elif message.is_reply:
             refwd_text = await self.handle_telegram_reply(message)
@@ -669,14 +669,14 @@ class TelegramHandler(object):
                 self.irc.iid_to_tid[channel] = chat.id
                 await self.irc.join_irc_channel(self.irc.irc_nick, channel, full_join=True)
 
-    async def handle_telegram_action(self, message):
+    async def handle_telegram_action(self, message, mid):
         if isinstance(message.action, tgty.MessageActionPinMessage):
             replied = await message.get_reply_message()
             cid = self.mid.num_to_id_offset(replied.peer_id, replied.id)
             action_text = 'has pinned message [{}]'.format(cid)
         elif isinstance(message.action, tgty.MessageActionChatEditPhoto):
             _, media_type = self.scan_photo_attributes(message.action.photo)
-            photo_url = await self.download_telegram_media(message)
+            photo_url = await self.download_telegram_media(message, mid)
             action_text = 'has changed chat [{}] {}'.format(media_type, photo_url)
         else:
             action_text = ''
@@ -744,7 +744,7 @@ class TelegramHandler(object):
             to_download = False
             if isinstance(message.media.webpage, tgty.WebPage):
                 # web
-                return await self.handle_webpage(message.media.webpage, message)
+                return await self.handle_webpage(message.media.webpage, message, mid)
             elif isinstance(message.media.webpage, tgty.WebPagePending):
                 media_type = 'webpending'
                 media_url_or_data = message.message
@@ -831,7 +831,7 @@ class TelegramHandler(object):
 
         if to_download:
             relay_attr = (message, user, mid, media_type)
-            media_url_or_data = await self.download_telegram_media(message, filename, size, relay_attr)
+            media_url_or_data = await self.download_telegram_media(message, mid, filename, size, relay_attr)
 
         return self.format_media(media_type, media_url_or_data, caption)
 
@@ -854,9 +854,9 @@ class TelegramHandler(object):
             target_mine = ''
         return target_mine
 
-    async def handle_webpage(self, webpage, message):
+    async def handle_webpage(self, webpage, message, mid):
         media_type = 'web'
-        logo = await self.download_telegram_media(message)
+        logo = await self.download_telegram_media(message, mid)
         if is_url_equiv(webpage.url, webpage.display_url):
             url_data = webpage.url
         else:
@@ -914,11 +914,12 @@ class TelegramHandler(object):
 
         return size, media_type
 
-    async def download_telegram_media(self, message, filename=None, size=0, relay_attr=None):
+    async def download_telegram_media(self, message, mid, filename=None, size=0, relay_attr=None):
         if not self.download:
             return ''
         if filename:
-            new_file = sanitize_filename(filename)
+            idd_file = add_filename(filename, mid)
+            new_file = sanitize_filename(idd_file)
             new_path = os.path.join(self.telegram_media_dir, new_file)
             if os.path.exists(new_path):
                 local_path = new_path
@@ -931,7 +932,9 @@ class TelegramHandler(object):
             local_path = await message.download_media(self.telegram_media_dir)
             if not local_path: return ''
             filetype = os.path.splitext(local_path)[1]
-            new_file = str(self.media_cn) + filetype
+            gen_file = str(self.media_cn) + filetype
+            idd_file = add_filename(gen_file, mid)
+            new_file = sanitize_filename(idd_file)
             self.media_cn += 1
             new_path = os.path.join(self.telegram_media_dir, new_file)
 
