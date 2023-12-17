@@ -16,7 +16,7 @@ import difflib
 
 # Constants
 
-FILENAME_INVALID_CHARS = re.compile('[/{}<>()"\'\\|&]')
+FILENAME_INVALID_CHARS = re.compile('[/{}<>()"\'\\|&#%?]')
 SIMPLE_URL = re.compile('http(|s)://[^ ]+')
 
 # Utilities
