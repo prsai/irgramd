@@ -81,7 +81,12 @@ def split_lines(message):
     return messages_limited
 
 def sanitize_filename(fn):
-    return FILENAME_INVALID_CHARS.sub('', fn).strip('-').replace(' ','_')
+    cn = str(sanitize_filename.cn)
+    new_fn, ns = FILENAME_INVALID_CHARS.subn(cn, fn)
+    if ns:
+        sanitize_filename.cn += 1
+    return new_fn.strip('-').replace(' ','_')
+sanitize_filename.cn = 0
 
 def add_filename(filename, add):
     if add:
