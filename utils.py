@@ -13,6 +13,7 @@ import re
 import datetime
 import zoneinfo
 import difflib
+import logging
 
 # Constants
 
@@ -214,3 +215,13 @@ def fix_braces(text):
 def format_timestamp(format, tz, date):
     date_local = date.astimezone(zoneinfo.ZoneInfo(tz))
     return date_local.strftime(format)
+
+def parse_loglevel(level):
+    levelu = level.upper()
+    if levelu == 'NONE':
+        l = None
+    elif levelu in ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'):
+        l = getattr(logging, levelu)
+    else:
+        l = False
+    return l
