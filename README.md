@@ -105,9 +105,9 @@ From irgramd directory, in foreground:
 
     ./irgramd
 
-In background (without logs):
+In background (with logs):
 
-    ./irgramd --logging=none &
+    ./irgramd --log-file=irgramd.log &
 
 ## Notes
 
