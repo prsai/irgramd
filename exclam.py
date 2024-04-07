@@ -1,7 +1,7 @@
 # irgramd: IRC-Telegram gateway
 # exclam.py: IRC exclamation command handlers
 #
-# Copyright (c) 2023 E. Bosch <presidev@AT@gmail.com>
+# Copyright (c) 2023, 2024 E. Bosch <presidev@AT@gmail.com>
 #
 # Use of this source code is governed by a MIT style license that
 # can be found in the LICENSE file included in this project.
@@ -17,6 +17,7 @@ class exclam(command):
             '!re':        (self.handle_command_re,                    2,  2,  2),
             '!ed':        (self.handle_command_ed,                    2,  2,  2),
             '!del':       (self.handle_command_del,                   1,  1, -1),
+            '!fwd':       (self.handle_command_fwd,                   2,  2, -1),
         }
         self.tg = telegram
         self.irc = telegram.irc
@@ -104,5 +105,39 @@ class exclam(command):
             (
               '   !del <compact_id>',
               'Delete a message with <compact_id> on current channel/chat'
+            )
+        return reply
+
+    async def handle_command_fwd(self, cid=None, chat=None, help=None):
+        if not help:
+            id, chk_msg = await self.check_msg(cid)
+            if chk_msg is not None:
+                async def send_fwd(tgt_ent, id):
+                    from_ent = await self.tg.telegram_client.get_entity(self.tmp_telegram_id)
+                    self.tmp_tg_msg = await self.tg.telegram_client.forward_messages(tgt_ent, id, from_ent)
+                    return self.tmp_tg_msg
+
+                tgt = chat.lower()
+                if tgt in self.irc.iid_to_tid:
+                    tgt_ent = await self.tg.telegram_client.get_entity(self.irc.iid_to_tid[tgt])
+                    msg = await send_fwd(tgt_ent, id)
+                    # echo fwded message
+                    await self.tg.handle_telegram_message(event=None, message=msg)
+                    reply = True
+                elif tgt in (u.irc_nick.lower() for u in self.irc.users.values() if u.stream):
+                    tgt_ent = await self.tg.telegram_client.get_me()
+                    await send_fwd(tgt_ent, id)
+                    reply = True
+                else:
+                    reply = ('Unknown chat to forward',)
+            else:
+                reply = ('Unknown message to forward',)
+        else: # HELP.brief or HELP.desc (first line)
+            reply = ('   !fwd        Forward a message',)
+        if help == HELP.desc:  # rest of HELP.desc
+            reply += \
+            (
+              '   !fwd <compact_id> <chat>',
+              'Forward a message with <compact_id> to <chat> channel/chat.'
             )
         return reply
