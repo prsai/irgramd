@@ -2,7 +2,7 @@
 # telegram.py: Interface to Telethon Telegram library
 #
 # Copyright (c) 2019 Peter Bui <pbui@bx612.space>
-# Copyright (c) 2020-2023 E. Bosch <presidev@AT@gmail.com>
+# Copyright (c) 2020-2024 E. Bosch <presidev@AT@gmail.com>
 #
 # Use of this source code is governed by a MIT style license that
 # can be found in the LICENSE file included in this project.
@@ -712,8 +712,8 @@ class TelegramHandler(object):
             secondary_name = saved_peer_name
         else:
             # if it's from me I want to know who was the destination of a message (user)
-            if self.refwd_me:
-               secondary_name = self.get_irc_user_from_telegram(message.fwd_from.saved_from_peer.user_id).irc_nick
+            if self.refwd_me and (saved_from_peer := message.fwd_from.saved_from_peer) is not None:
+               secondary_name = self.get_irc_user_from_telegram(saved_from_peer.user_id).irc_nick
             else:
                secondary_name = ''
                space2 = ''
