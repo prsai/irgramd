@@ -38,6 +38,7 @@ class TelegramHandler(object):
     def __init__(self, irc, settings):
         self.logger     = logging.getLogger()
         self.config_dir = settings['config_dir']
+        self.cache_dir  = settings['cache_dir']
         self.download   = settings['download_media']
         self.notice_size = settings['download_notice'] * 1048576
         self.media_dir  = settings['media_dir']
@@ -72,7 +73,7 @@ class TelegramHandler(object):
 
     async def initialize_telegram(self):
         # Setup media folder
-        self.telegram_media_dir = self.media_dir or os.path.join(self.config_dir, 'media')
+        self.telegram_media_dir = os.path.expanduser(self.media_dir or os.path.join(self.cache_dir, 'media'))
         if not os.path.exists(self.telegram_media_dir):
             os.makedirs(self.telegram_media_dir)
 
