@@ -6,6 +6,7 @@
 # Use of this source code is governed by a MIT style license that
 # can be found in the LICENSE file included in this project.
 
+import os
 from telethon.errors.rpcerrorlist import MessageNotModifiedError, MessageAuthorRequiredError
 
 from utils import command, HELP
@@ -18,6 +19,7 @@ class exclam(command):
             '!ed':        (self.handle_command_ed,                    2,  2,  2),
             '!del':       (self.handle_command_del,                   1,  1, -1),
             '!fwd':       (self.handle_command_fwd,                   2,  2, -1),
+            '!upl':       (self.handle_command_upl,                   1,  2,  2),
         }
         self.tg = telegram
         self.irc = telegram.irc
@@ -139,5 +141,25 @@ class exclam(command):
             (
               '   !fwd <compact_id> <chat>',
               'Forward a message with <compact_id> to <chat> channel/chat.'
+            )
+        return reply
+
+    async def handle_command_upl(self, file=None, caption=None, help=None):
+        if not help:
+            try:
+                file_path = os.path.join(self.tg.telegram_upload_dir, file)
+                self.tmp_tg_msg = await self.tg.telegram_client.send_file(self.tmp_telegram_id, file_path, caption=caption)
+                reply = True
+            except:
+                reply = ('Error uploading',)
+        else: # HELP.brief or HELP.desc (first line)
+            reply = ('   !upl        Upload a file to current channel/chat',)
+        if help == HELP.desc:  # rest of HELP.desc
+            reply += \
+            (
+              '   !upl <file name>  [<optional caption>]',
+              'Upload the file referenced by <file name>  to current ',
+              'channel/chat, the file must be present in "upload"',
+              'local directory.'
             )
         return reply

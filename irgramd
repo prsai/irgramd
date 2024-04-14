@@ -110,6 +110,7 @@ if __name__ == '__main__':
     tornado.options.define('tls', default=False, help='Use TLS/SSL encrypted connection for IRC server')
     tornado.options.define('tls_cert', default=None, metavar='CERTFILE', help='IRC server certificate chain for TLS/SSL, also can contain private key if not defined with `tls_key`')
     tornado.options.define('tls_key', default=None, metavar='KEYFILE', help='IRC server private key for TLS/SSL')
+    tornado.options.define('upload_dir', default=None, metavar='PATH', help='Directory where files to upload are picked up, default "upload" in `cache_dir`')
     try:
         # parse cmd line first time to get --config and --config_dir
         tornado.options.parse_command_line()

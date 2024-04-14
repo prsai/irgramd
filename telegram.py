@@ -43,6 +43,7 @@ class TelegramHandler(object):
         self.notice_size = settings['download_notice'] * 1048576
         self.media_dir  = settings['media_dir']
         self.media_url  = settings['media_url']
+        self.upload_dir = settings['upload_dir']
         self.api_id     = settings['api_id']
         self.api_hash   = settings['api_hash']
         self.phone      = settings['phone']
@@ -76,6 +77,11 @@ class TelegramHandler(object):
         self.telegram_media_dir = os.path.expanduser(self.media_dir or os.path.join(self.cache_dir, 'media'))
         if not os.path.exists(self.telegram_media_dir):
             os.makedirs(self.telegram_media_dir)
+
+        # Setup upload folder
+        self.telegram_upload_dir = os.path.expanduser(self.upload_dir or os.path.join(self.cache_dir, 'upload'))
+        if not os.path.exists(self.telegram_upload_dir):
+            os.makedirs(self.telegram_upload_dir)
 
         # Setup session folder
         self.telegram_session_dir = os.path.join(self.config_dir, 'session')
