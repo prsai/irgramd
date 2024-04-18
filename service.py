@@ -91,8 +91,8 @@ class service(command):
               '   dialog <subcommand> [id]',
               'Manage conversations (dialogs) established in Telegram, the',
               'following subcommands are available:',
-              '   archive <id>   Archive the dialog specified by id',
-              '   delete <id>    Delete the dialog specified by id',
+#              '   archive <id>   Archive the dialog specified by id',
+#              '   delete <id>    Delete the dialog specified by id',
               '   list           Show all dialogs',
             )
         return reply
