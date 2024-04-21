@@ -147,7 +147,10 @@ class exclam(command):
     async def handle_command_upl(self, file=None, caption=None, help=None):
         if not help:
             try:
-                file_path = os.path.join(self.tg.telegram_upload_dir, file)
+                if file[:8] == 'https://' or file[:7] == 'http://':
+                    file_path = file
+                else:
+                    file_path = os.path.join(self.tg.telegram_upload_dir, file)
                 self.tmp_tg_msg = await self.tg.telegram_client.send_file(self.tmp_telegram_id, file_path, caption=caption)
                 reply = True
             except:
@@ -157,9 +160,9 @@ class exclam(command):
         if help == HELP.desc:  # rest of HELP.desc
             reply += \
             (
-              '   !upl <file name>  [<optional caption>]',
-              'Upload the file referenced by <file name>  to current ',
+              '   !upl <file name/URL> [<optional caption>]',
+              'Upload the file referenced by <file name/URL> to current',
               'channel/chat, the file must be present in "upload"',
-              'local directory.'
+              'irgramd local directory or be an external HTTP/HTTPS URL.'
             )
         return reply
