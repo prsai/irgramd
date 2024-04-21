@@ -45,7 +45,7 @@ executed in a different host).
 - Channels, groups and private chats
 - Users and channels mapped in IRC
 - Messages (receive, send)
-- Media in messages (receive, download)
+- Media in messages (receive, download, upload)
 - Replies (receive, send)
 - Forwards (receive, send)
 - Deletions (receive, do)
