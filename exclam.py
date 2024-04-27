@@ -50,7 +50,7 @@ class exclam(command):
                 self.tmp_tg_msg = await self.tg.telegram_client.send_message(self.tmp_telegram_id, msg, reply_to=id)
                 reply = True
             else:
-                reply = ('Unknown message to reply',)
+                reply = ('!re: Unknown message to reply',)
         else: # HELP.brief or HELP.desc (first line)
             reply = ('   !re         Reply to a message',)
         if help == HELP.desc:  # rest of HELP.desc
@@ -72,7 +72,7 @@ class exclam(command):
                     self.tmp_tg_msg = ed_msg
                     reply = True
                 except MessageAuthorRequiredError:
-                    reply = ('Not the author of the message to edit',)
+                    reply = ('!ed: Not the author of the message to edit',)
                 else:
                     reply = True
             else:
@@ -94,7 +94,7 @@ class exclam(command):
             if del_msg is not None:
                 deleted = await self.tg.telegram_client.delete_messages(self.tmp_telegram_id, del_msg)
                 if deleted[0].pts_count == 0:
-                    reply = ('Not possible to delete',)
+                    reply = ('!del: Not possible to delete',)
                 else:
                     self.tmp_tg_msg = None
                     reply = None
@@ -131,7 +131,7 @@ class exclam(command):
                     await send_fwd(tgt_ent, id)
                     reply = True
                 else:
-                    reply = ('Unknown chat to forward',)
+                    reply = ('!fwd: Unknown chat to forward',)
             else:
                 reply = ('Unknown message to forward',)
         else: # HELP.brief or HELP.desc (first line)
@@ -154,7 +154,7 @@ class exclam(command):
                 self.tmp_tg_msg = await self.tg.telegram_client.send_file(self.tmp_telegram_id, file_path, caption=caption)
                 reply = True
             except:
-                reply = ('Error uploading',)
+                reply = ('!upl: Error uploading',)
         else: # HELP.brief or HELP.desc (first line)
             reply = ('   !upl        Upload a file to current channel/chat',)
         if help == HELP.desc:  # rest of HELP.desc
