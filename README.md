@@ -116,6 +116,12 @@ Unix/Linux. The user that executes irgramd must have permissions to use PAM
 (e.g. in Linux be in the shadow group or equivalent). The dependency is
 totally optional, if not used, the module pyPAM is not needed.
 
+## Inspired by
+
+- [telegramircd]
+- [ibotg]
+- [bitlbee]
+
 ## License
 
 Copyright (c) 2019 Peter Bui <pbui@bx612.space>  
@@ -137,3 +143,6 @@ can be found in the LICENSE file included in this project.
 [aioconsole]: https://github.com/vxgmichel/aioconsole
 [pyPAM]: https://packages.debian.org/bullseye/python3-pam
 [BNC]: https://en.wikipedia.org/wiki/BNC_(software)
+[telegramircd]: https://github.com/prsai/telegramircd
+[ibotg]: https://github.com/prsai/ibotg
+[bitlbee]: https://www.bitlbee.org
