@@ -693,18 +693,33 @@ class TelegramHandler(object):
         space = ' '
         trunc = ''
         replied = await message.get_reply_message()
-        replied_msg = replied.message
-        cid = self.mid.num_to_id_offset(replied.peer_id, replied.id)
+        if replied:
+            replied_msg = replied.message
+            cid = self.mid.num_to_id_offset(replied.peer_id, replied.id)
+            replied_user = self.get_irc_user_from_telegram(replied.sender_id)
+        else:
+            replied_id = message.reply_to.reply_to_msg_id
+            cid = self.mid.num_to_id_offset(message.peer_id, replied_id)
+            if replied_id in self.cache:
+                text = self.cache[replied_id]['text']
+                replied_user = self.cache[replied_id]['user']
+                sp = ' '
+            else:
+                text = ''
+                replied_user = ''
+                sp = ''
+            replied_msg = '|Deleted|{}{}'.format(sp, text)
         if not replied_msg:
             replied_msg = ''
             space = ''
         elif len(replied_msg) > self.quote_len:
             replied_msg = replied_msg[:self.quote_len]
             trunc = '...'
-        replied_user = self.get_irc_user_from_telegram(replied.sender_id)
         if replied_user is None:
             replied_nick = '{}'
             self.refwd_me = True
+        elif replied_user == '':
+            replied_nick = ''
         else:
             replied_nick = replied_user.irc_nick
 
