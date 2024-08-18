@@ -37,7 +37,7 @@ class exclam(command):
 
     async def check_msg(self, cid):
         id = self.tg.mid.id_to_num_offset(self.tmp_telegram_id, cid)
-        if id is None:
+        if id is None or id < -2147483648 or id > 2147483647:
             chk_msg = None
         else:
             chk_msg = await self.tg.telegram_client.get_messages(entity=self.tmp_telegram_id, ids=id)
