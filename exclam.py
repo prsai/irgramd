@@ -20,6 +20,7 @@ class exclam(command):
             '!del':       (self.handle_command_del,                   1,  1, -1),
             '!fwd':       (self.handle_command_fwd,                   2,  2, -1),
             '!upl':       (self.handle_command_upl,                   1,  2,  2),
+            '!reupl':     (self.handle_command_reupl,                 2,  3,  3),
         }
         self.tg = telegram
         self.irc = telegram.irc
@@ -144,17 +145,18 @@ class exclam(command):
             )
         return reply
 
-    async def handle_command_upl(self, file=None, caption=None, help=None):
+    async def handle_command_upl(self, file=None, caption=None, help=None, re_id=None):
         if not help:
             try:
                 if file[:8] == 'https://' or file[:7] == 'http://':
                     file_path = file
                 else:
                     file_path = os.path.join(self.tg.telegram_upload_dir, file)
-                self.tmp_tg_msg = await self.tg.telegram_client.send_file(self.tmp_telegram_id, file_path, caption=caption)
+                self.tmp_tg_msg = await self.tg.telegram_client.send_file(self.tmp_telegram_id, file_path, caption=caption, reply_to=re_id)
                 reply = True
             except:
-                reply = ('!upl: Error uploading',)
+                cmd = '!reupl' if re_id else '!upl'
+                reply = ('{}: Error uploading'.format(cmd),)
         else: # HELP.brief or HELP.desc (first line)
             reply = ('   !upl        Upload a file to current channel/chat',)
         if help == HELP.desc:  # rest of HELP.desc
@@ -164,5 +166,25 @@ class exclam(command):
               'Upload the file referenced by <file name/URL> to current',
               'channel/chat, the file must be present in "upload"',
               'irgramd local directory or be an external HTTP/HTTPS URL.'
+            )
+        return reply
+
+    async def handle_command_reupl(self, cid=None, file=None, caption=None, help=None):
+        if not help:
+            id, chk_msg = await self.check_msg(cid)
+            if chk_msg is not None:
+                reply = await self.handle_command_upl(file, caption, re_id=id)
+            else:
+                reply = ('!reupl: Unknown message to reply',)
+        else: # HELP.brief or HELP.desc (first line)
+            reply = ('   !reupl      Reply to a message with an upload',)
+        if help == HELP.desc:  # rest of HELP.desc
+            reply += \
+            (
+              '   !reupl <compact_id> <file name/URL> [<optional caption>]',
+              'Reply with the upload of <file name/URL> to a message with',
+              '<compact_id> on current channel/chat. The file must be',
+              'present in "upload" irgramd local directory or be an external',
+              'HTTP/HTTPS URL.'
             )
         return reply
