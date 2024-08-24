@@ -22,7 +22,7 @@ from telethon.tl.functions.messages import GetMessagesReactionsRequest
 
 from include import CHAN_MAX_LENGHT, NICK_MAX_LENGTH
 from irc import IRCUser
-from utils import sanitize_filename, add_filename, is_url_equiv, extract_url, get_human_size, get_human_duration, get_highlighted, fix_braces, format_timestamp
+from utils import sanitize_filename, add_filename, is_url_equiv, extract_url, get_human_size, get_human_duration, get_highlighted, fix_braces, format_timestamp, pretty
 import emoji2emoticon as e
 
 # Test IP table
@@ -481,7 +481,7 @@ class TelegramHandler(object):
         self.sorted_len_usernames.sort(key=lambda k: len(k), reverse=True)
 
     async def handle_telegram_edited(self, event):
-        self.logger.debug('Handling Telegram Message Edited: %s', event)
+        self.logger.debug('Handling Telegram Message Edited: %s', pretty(event))
 
         id = event.message.id
         mid = self.mid.num_to_id_offset(event.message.peer_id, id)
@@ -538,7 +538,7 @@ class TelegramHandler(object):
         self.to_cache(id, mid, message, message_rendered, user, chan, event.message.media)
 
     async def handle_telegram_deleted(self, event):
-        self.logger.debug('Handling Telegram Message Deleted: %s', event)
+        self.logger.debug('Handling Telegram Message Deleted: %s', pretty(event))
 
         for deleted_id in event.original_update.messages:
             if deleted_id in self.cache:
@@ -552,7 +552,7 @@ class TelegramHandler(object):
                 await self.relay_telegram_private_message(self.irc.service_user, text)
 
     async def handle_raw(self, update):
-        self.logger.debug('Handling Telegram Raw Event: %s', update)
+        self.logger.debug('Handling Telegram Raw Event: %s', pretty(update))
 
         if isinstance(update, tgty.UpdateWebPage) and isinstance(update.webpage, tgty.WebPage):
             message = self.webpending.pop(update.webpage.id, None)
@@ -560,7 +560,7 @@ class TelegramHandler(object):
                 await self.handle_telegram_message(event=None, message=message, upd_to_webpend=update.webpage)
 
     async def handle_telegram_message(self, event, message=None, upd_to_webpend=None, history=False):
-        self.logger.debug('Handling Telegram Message: %s', event or message)
+        self.logger.debug('Handling Telegram Message: %s', pretty(event or message))
 
         msg = event.message if event else message
 
@@ -628,7 +628,7 @@ class TelegramHandler(object):
             await self.irc.send_msg(user, None, message)
 
     async def relay_telegram_channel_message(self, message, user, text, channel, action):
-        self.logger.debug('Handling Telegram Channel Message: %s', message or text)
+        self.logger.debug('Handling Telegram Channel Message: %s', pretty(message) or text)
 
         if message:
             entity = await message.get_chat()
@@ -644,7 +644,7 @@ class TelegramHandler(object):
         return chan
 
     async def handle_telegram_chat_action(self, event):
-        self.logger.debug('Handling Telegram Chat Action: %s', event)
+        self.logger.debug('Handling Telegram Chat Action: %s', pretty(event))
 
         try:
             tid = event.action_message.to_id.channel_id

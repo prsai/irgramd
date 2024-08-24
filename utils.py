@@ -228,3 +228,6 @@ def parse_loglevel(level):
     else:
         l = False
     return l
+
+def pretty(object):
+    return object.stringify() if object else object
