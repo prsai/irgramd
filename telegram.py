@@ -9,7 +9,6 @@
 
 import logging
 import os
-import datetime
 import re
 import aioconsole
 import asyncio
@@ -22,7 +21,8 @@ from telethon.tl.functions.messages import GetMessagesReactionsRequest
 
 from include import CHAN_MAX_LENGHT, NICK_MAX_LENGTH
 from irc import IRCUser
-from utils import sanitize_filename, add_filename, is_url_equiv, extract_url, get_human_size, get_human_duration, get_highlighted, fix_braces, format_timestamp, pretty
+from utils import sanitize_filename, add_filename, is_url_equiv, extract_url, get_human_size, get_human_duration
+from utils import get_highlighted, fix_braces, format_timestamp, pretty, current_date
 import emoji2emoticon as e
 
 # Test IP table
@@ -286,7 +286,7 @@ class TelegramHandler(object):
             idle = 0
         elif isinstance(user.status,tgty.UserStatusOffline):
             last = user.status.was_online
-            current = datetime.datetime.now(datetime.timezone.utc)
+            current = current_date()
             idle = int((current - last).total_seconds())
         elif isinstance(user.status,tgty.UserStatusLastWeek):
             idle = 604800

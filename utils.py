@@ -152,7 +152,7 @@ def get_human_duration(duration):
     return res
 
 def compact_date(date, tz):
-    delta = datetime.datetime.now(datetime.timezone.utc) - date
+    delta = current_date() - date
     date_local = date.astimezone(zoneinfo.ZoneInfo(tz))
 
     if delta.days < 1:
@@ -163,6 +163,9 @@ def compact_date(date, tz):
         compact_date = date_local.strftime('%Y')
 
     return compact_date
+
+def current_date():
+    return datetime.datetime.now(datetime.timezone.utc)
 
 def get_highlighted(a, b):
     awl = len(a.split())
