@@ -29,7 +29,7 @@ import emoji2emoticon as e
 
 TEST_IPS = { 1: '149.154.175.10',
              2: '149.154.167.40',
-             3: '149.154.175.117'
+             3: '149.154.175.117',
            }
 
     # Telegram
@@ -102,10 +102,10 @@ class TelegramHandler(object):
         # Register Telegram callbacks
         callbacks = (
             (self.handle_telegram_message    , telethon.events.NewMessage),
-            (self.handle_raw,                  telethon.events.Raw),
+            (self.handle_raw                 , telethon.events.Raw),
             (self.handle_telegram_chat_action, telethon.events.ChatAction),
             (self.handle_telegram_deleted    , telethon.events.MessageDeleted),
-            (self.handle_telegram_edited,      telethon.events.MessageEdited),
+            (self.handle_telegram_edited     , telethon.events.MessageEdited),
         )
         for handler, event in callbacks:
             self.telegram_client.add_event_handler(handler, event)
@@ -416,7 +416,7 @@ class TelegramHandler(object):
                            'rendered_text': proc_message,
                            'user': user,
                            'channel': chan,
-                           'media': media
+                           'media': media,
                          }
 
     def replace_mentions(self, text, me_nick='', received=True):

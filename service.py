@@ -249,7 +249,7 @@ class service(command):
             (
               '   mark_read <peer>',
               'Mark all messages on <peer> (channel or user) as read, this also will',
-              'reset the number of mentions to you on <peer>.'
+              'reset the number of mentions to you on <peer>.',
             )
         return reply
 

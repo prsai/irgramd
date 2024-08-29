@@ -59,7 +59,7 @@ class exclam(command):
             (
               '   !re <compact_id> <message>',
               'Reply with <message> to a message with <compact_id> on current',
-              'channel/chat.'
+              'channel/chat.',
             )
         return reply
 
@@ -85,7 +85,7 @@ class exclam(command):
             (
               '   !ed <compact_id> <new_message>',
               'Edit a message with <compact_id> on current channel/chat,',
-              '<new_message> replaces the current message.'
+              '<new_message> replaces the current message.',
             )
         return reply
 
@@ -165,7 +165,7 @@ class exclam(command):
               '   !upl <file name/URL> [<optional caption>]',
               'Upload the file referenced by <file name/URL> to current',
               'channel/chat, the file must be present in "upload"',
-              'irgramd local directory or be an external HTTP/HTTPS URL.'
+              'irgramd local directory or be an external HTTP/HTTPS URL.',
             )
         return reply
 
@@ -185,6 +185,6 @@ class exclam(command):
               'Reply with the upload of <file name/URL> to a message with',
               '<compact_id> on current channel/chat. The file must be',
               'present in "upload" irgramd local directory or be an external',
-              'HTTP/HTTPS URL.'
+              'HTTP/HTTPS URL.',
             )
         return reply
