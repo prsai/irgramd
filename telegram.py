@@ -68,6 +68,8 @@ class TelegramHandler(object):
         self.webpending = {}
         self.refwd_me = False
         self.cache = collections.OrderedDict()
+        self.volatile_cache = collections.OrderedDict()
+        self.prev_id = {}
         self.sorted_len_usernames = []
         # Set event to be waited by irc.check_telegram_auth()
         self.auth_checked = asyncio.Event()
@@ -408,8 +410,7 @@ class TelegramHandler(object):
         return case, react
 
     def to_cache(self, id, mid, message, proc_message, user, chan, media):
-        if len(self.cache) >= 10000:
-            self.cache.popitem(last=False)
+        self.limit_cache(self.cache)
         self.cache[id] = {
                            'mid': mid,
                            'text': message,
@@ -418,6 +419,26 @@ class TelegramHandler(object):
                            'channel': chan,
                            'media': media,
                          }
+
+    def to_volatile_cache(self, prev_id, id, ev, user, chan, date):
+        if chan in prev_id:
+            prid = prev_id[chan] if chan else prev_id[user]
+            self.limit_cache(self.volatile_cache)
+            elem = {
+                     'id': id,
+                     'rendered_event': ev,
+                     'user': user,
+                     'channel': chan,
+                     'date': date,
+                   }
+            if prid not in self.volatile_cache:
+                self.volatile_cache[prid] = [elem]
+            else:
+                self.volatile_cache[prid].append(elem)
+
+    def limit_cache(self, cache):
+        if len(cache) >= 10000:
+            cache.popitem(last=False)
 
     def replace_mentions(self, text, me_nick='', received=True):
         # For received replace @mention to ~mention~
@@ -536,6 +557,7 @@ class TelegramHandler(object):
         chan = await self.relay_telegram_message(event, user, text)
 
         self.to_cache(id, mid, message, message_rendered, user, chan, event.message.media)
+        self.to_volatile_cache(self.prev_id, id, text, user, chan, current_date())
 
     async def handle_telegram_deleted(self, event):
         self.logger.debug('Handling Telegram Message Deleted: %s', pretty(event))
@@ -547,6 +569,7 @@ class TelegramHandler(object):
                 user = self.cache[deleted_id]['user']
                 chan = self.cache[deleted_id]['channel']
                 await self.relay_telegram_message(message=None, user=user, text=text, channel=chan)
+                self.to_volatile_cache(self.prev_id, deleted_id, text, user, chan, current_date())
             else:
                 text = 'Message id {} deleted not in cache'.format(deleted_id)
                 await self.relay_telegram_private_message(self.irc.service_user, text)
@@ -569,8 +592,11 @@ class TelegramHandler(object):
         text = await self.render_text(msg, mid, upd_to_webpend, user)
         text_send = self.set_history_timestamp(text, history, msg.date, msg.action)
         chan = await self.relay_telegram_message(msg, user, text_send)
+        await self.history_search_volatile(history, msg.id)
 
         self.to_cache(msg.id, mid, msg.message, text, user, chan, msg.media)
+        peer = chan if chan else user
+        self.prev_id[peer] = msg.id
 
         self.refwd_me = False
 
@@ -608,6 +634,17 @@ class TelegramHandler(object):
         else:
             res = text
         return res
+
+    async def history_search_volatile(self, history, id):
+        if history:
+            if id in self.volatile_cache:
+                for item in self.volatile_cache[id]:
+                    user = item['user']
+                    text = item['rendered_event']
+                    chan = item['channel']
+                    date = item['date']
+                    text_send = self.set_history_timestamp(text, history=True, date=date, action=False)
+                    await self.relay_telegram_message(None, user, text_send, chan)
 
     async def relay_telegram_message(self, message, user, text, channel=None):
         private = (message and message.is_private) or (not message and not channel)
