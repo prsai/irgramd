@@ -43,6 +43,9 @@ class HELP:
     desc = 1
     brief = 2
 
+class LOGL:
+    debug = False
+
 def chunks(iterable, n, fillvalue=None):
     ''' Return iterable consisting of a sequence of n-length chunks '''
     args = [iter(iterable)] * n
@@ -224,6 +227,8 @@ def format_timestamp(format, tz, date):
 
 def parse_loglevel(level):
     levelu = level.upper()
+    if levelu == 'DEBUG':
+        LOGL.debug = True
     if levelu == 'NONE':
         l = None
     elif levelu in ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'):
@@ -233,4 +238,4 @@ def parse_loglevel(level):
     return l
 
 def pretty(object):
-    return object.stringify() if object else object
+    return object.stringify() if LOGL.debug and object else object
