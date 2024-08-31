@@ -8,6 +8,6 @@
 
 # Constants
 
-VERSION                      = '0.1'
+VERSION                      = '0.2'
 NICK_MAX_LENGTH              = 20
 CHAN_MAX_LENGHT              = 50

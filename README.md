@@ -13,7 +13,7 @@ is used as [project management and secondary repository]**
 **irgramd was forked from [pbui/irtelegramd], was heavily modified and
 currently is a project on its own**
 
-**irgramd is under active development in alpha state, though usable, several
+**irgramd is under active development, though usable, several
 planned features are not implemented yet**
 
 ## How it works
