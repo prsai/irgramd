@@ -18,7 +18,7 @@ import tornado.ioloop
 
 # Local modules
 
-from include import VERSION, CHAN_MAX_LENGHT, NICK_MAX_LENGTH
+from include import VERSION, CHAN_MAX_LENGTH, NICK_MAX_LENGTH
 from irc_replies import irc_codes
 from utils import chunks, set_replace, split_lines
 from service import service
@@ -529,7 +529,7 @@ class IRCHandler(object):
         await self.reply_code(user, 'RPL_ENDOFMOTD')
 
     async def send_isupport(self, user):
-        await self.reply_code(user, 'RPL_ISUPPORT', (CHAN_MAX_LENGHT, NICK_MAX_LENGTH))
+        await self.reply_code(user, 'RPL_ISUPPORT', (CHAN_MAX_LENGTH, NICK_MAX_LENGTH))
 
     async def send_help(self, user):
         for line in (

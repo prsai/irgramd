@@ -10,4 +10,4 @@
 
 VERSION                      = '0.2'
 NICK_MAX_LENGTH              = 20
-CHAN_MAX_LENGHT              = 50
+CHAN_MAX_LENGTH              = 50

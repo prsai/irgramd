@@ -19,7 +19,7 @@ from telethon.tl.functions.messages import GetMessagesReactionsRequest
 
 # Local modules
 
-from include import CHAN_MAX_LENGHT, NICK_MAX_LENGTH
+from include import CHAN_MAX_LENGTH, NICK_MAX_LENGTH
 from irc import IRCUser
 from utils import sanitize_filename, add_filename, is_url_equiv, extract_url, get_human_size, get_human_duration
 from utils import get_highlighted, fix_braces, format_timestamp, pretty, current_date
