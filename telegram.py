@@ -389,7 +389,9 @@ class TelegramHandler(object):
                    )
         async def get_reactions(m):
             react = await self.telegram_client(GetMessagesReactionsRequest(m.peer_id, id=[m.id]))
-            return react.updates[0].reactions.recent_reactions
+            updates = react.updates
+            r = next((x for x in updates if type(x) is tgty.UpdateMessageReactions), None)
+            return r.reactions.recent_reactions if r else None
 
         react = None
         if msg.reactions is None:
