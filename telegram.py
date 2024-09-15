@@ -659,7 +659,7 @@ class TelegramHandler(object):
         return chan
 
     async def relay_telegram_private_message(self, user, message, action=None):
-        self.logger.debug('Handling Telegram Private Message: %s, %s', user, message)
+        self.logger.debug('Relaying Telegram Private Message: %s, %s', user, message)
 
         if action:
             await self.irc.send_action(user, None, message)
@@ -667,13 +667,13 @@ class TelegramHandler(object):
             await self.irc.send_msg(user, None, message)
 
     async def relay_telegram_channel_message(self, message, user, text, channel, action):
-        self.logger.debug('Handling Telegram Channel Message: %s', pretty(message) or text)
-
         if message:
             entity = await message.get_chat()
             chan = await self.get_irc_channel_from_telegram_id(message.chat_id, entity)
         else:
             chan = channel
+
+        self.logger.debug('Relaying Telegram Channel Message: %s, %s', chan, text)
 
         if action:
             await self.irc.send_action(user, chan, text)
