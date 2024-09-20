@@ -537,7 +537,7 @@ class TelegramHandler(object):
         # Reactions
         else:
             action = 'React'
-            if len(message_rendered) > self.quote_len:
+            if len(message_rendered) > self.quote_len and not event.message.is_reply:
                 text_old = '{}...'.format(message_rendered[:self.quote_len])
                 text_old = fix_braces(text_old)
             else:
