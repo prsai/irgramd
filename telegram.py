@@ -401,7 +401,7 @@ class TelegramHandler(object):
                 case = 'edition'
             else:
                 case = 'react-del'
-        elif react := next((x for x in reactions if x.date == msg.edit_date), None):
+        elif react := max(reactions, key=lambda y: y.date):
             case = 'react-add'
         else:
             if msg_edited(msg):
