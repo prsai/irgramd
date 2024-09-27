@@ -503,6 +503,24 @@ class TelegramHandler(object):
         self.sorted_len_usernames.append(username)
         self.sorted_len_usernames.sort(key=lambda k: len(k), reverse=True)
 
+    def format_reaction(self, msg, message_rendered, edition_case, reaction):
+        if len(message_rendered) > self.quote_len and not msg.is_reply:
+            text_old = '{}...'.format(message_rendered[:self.quote_len])
+            text_old = fix_braces(text_old)
+        else:
+            text_old = message_rendered
+
+        if edition_case == 'react-add':
+            user = self.get_irc_user_from_telegram(reaction.peer_id.user_id)
+            emoji = reaction.reaction.emoticon
+            react_action = '+'
+            react_icon = e.emo[emoji] if emoji in e.emo else emoji
+        elif edition_case == 'react-del':
+            user = self.get_irc_user_from_telegram(event.sender_id)
+            react_action = '-'
+            react_icon = ''
+        return text_old, '{}{}'.format(react_action, react_icon), user
+
     async def handle_telegram_edited(self, event):
         self.logger.debug('Handling Telegram Message Edited: %s', pretty(event))
 
@@ -537,28 +555,33 @@ class TelegramHandler(object):
         # Reactions
         else:
             action = 'React'
-            if len(message_rendered) > self.quote_len and not event.message.is_reply:
-                text_old = '{}...'.format(message_rendered[:self.quote_len])
-                text_old = fix_braces(text_old)
-            else:
-                text_old = message_rendered
-
-            if edition_case == 'react-add':
-                user = self.get_irc_user_from_telegram(reaction.peer_id.user_id)
-                emoji = reaction.reaction.emoticon
-                react_action = '+'
-                react_icon = e.emo[emoji] if emoji in e.emo else emoji
-            elif edition_case == 'react-del':
-                user = self.get_irc_user_from_telegram(event.sender_id)
-                react_action = '-'
-                react_icon = ''
-            edition_react = '{}{}'.format(react_action, react_icon)
+            text_old, edition_react, user = self.format_reaction(event.message, message_rendered, edition_case, reaction)
 
         text = '|{} {}| {}'.format(action, text_old, edition_react)
 
         chan = await self.relay_telegram_message(event, user, text)
 
         self.to_cache(id, mid, message, message_rendered, user, chan, event.message.media)
+        self.to_volatile_cache(self.prev_id, id, text, user, chan, current_date())
+
+    async def handle_next_reaction(self, event):
+        self.logger.debug('Handling Telegram Next Reaction (2nd, 3rd, ...): %s', pretty(event))
+
+        reactions = event.reactions.recent_reactions
+        react = max(reactions, key=lambda y: y.date)
+        id = event.msg_id
+        msg = await self.telegram_client.get_messages(entity=event.peer, ids=id)
+        mid = self.mid.num_to_id_offset(msg.peer_id, id)
+        message = self.filters(msg.message)
+        message_rendered = await self.render_text(msg, mid, upd_to_webpend=None)
+
+        text_old, edition_react, user = self.format_reaction(msg, message_rendered, edition_case='react-add', reaction=react)
+
+        text = '|React {}| {}'.format(text_old, edition_react)
+
+        chan = await self.relay_telegram_message(msg, user, text)
+
+        self.to_cache(id, mid, message, message_rendered, user, chan, msg.media)
         self.to_volatile_cache(self.prev_id, id, text, user, chan, current_date())
 
     async def handle_telegram_deleted(self, event):
@@ -583,6 +606,9 @@ class TelegramHandler(object):
             message = self.webpending.pop(update.webpage.id, None)
             if message:
                 await self.handle_telegram_message(event=None, message=message, upd_to_webpend=update.webpage)
+
+        elif isinstance(update, tgty.UpdateMessageReactions):
+            await self.handle_next_reaction(update)
 
     async def handle_telegram_message(self, event, message=None, upd_to_webpend=None, history=False):
         self.logger.debug('Handling Telegram Message: %s', pretty(event or message))
