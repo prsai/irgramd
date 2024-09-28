@@ -71,6 +71,7 @@ class TelegramHandler(object):
         self.volatile_cache = collections.OrderedDict()
         self.prev_id = {}
         self.sorted_len_usernames = []
+        self.last_reaction = None
         # Set event to be waited by irc.check_telegram_auth()
         self.auth_checked = asyncio.Event()
 
@@ -554,6 +555,9 @@ class TelegramHandler(object):
 
         # Reactions
         else:
+            if self.last_reaction == reaction.date:
+                return
+            self.last_reaction = reaction.date
             action = 'React'
             text_old, edition_react, user = self.format_reaction(event.message, message_rendered, edition_case, reaction)
 
@@ -569,20 +573,23 @@ class TelegramHandler(object):
 
         reactions = event.reactions.recent_reactions
         react = max(reactions, key=lambda y: y.date)
-        id = event.msg_id
-        msg = await self.telegram_client.get_messages(entity=event.peer, ids=id)
-        mid = self.mid.num_to_id_offset(msg.peer_id, id)
-        message = self.filters(msg.message)
-        message_rendered = await self.render_text(msg, mid, upd_to_webpend=None)
+        
+        if self.last_reaction != react.date:
+            self.last_reaction = react.date
+            id = event.msg_id
+            msg = await self.telegram_client.get_messages(entity=event.peer, ids=id)
+            mid = self.mid.num_to_id_offset(msg.peer_id, id)
+            message = self.filters(msg.message)
+            message_rendered = await self.render_text(msg, mid, upd_to_webpend=None)
 
-        text_old, edition_react, user = self.format_reaction(msg, message_rendered, edition_case='react-add', reaction=react)
+            text_old, edition_react, user = self.format_reaction(msg, message_rendered, edition_case='react-add', reaction=react)
 
-        text = '|React {}| {}'.format(text_old, edition_react)
+            text = '|React {}| {}'.format(text_old, edition_react)
 
-        chan = await self.relay_telegram_message(msg, user, text)
+            chan = await self.relay_telegram_message(msg, user, text)
 
-        self.to_cache(id, mid, message, message_rendered, user, chan, msg.media)
-        self.to_volatile_cache(self.prev_id, id, text, user, chan, current_date())
+            self.to_cache(id, mid, message, message_rendered, user, chan, msg.media)
+            self.to_volatile_cache(self.prev_id, id, text, user, chan, current_date())
 
     async def handle_telegram_deleted(self, event):
         self.logger.debug('Handling Telegram Message Deleted: %s', pretty(event))
