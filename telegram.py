@@ -517,7 +517,7 @@ class TelegramHandler(object):
             react_action = '+'
             react_icon = e.emo[emoji] if emoji in e.emo else emoji
         elif edition_case == 'react-del':
-            user = self.get_irc_user_from_telegram(event.sender_id)
+            user = self.get_irc_user_from_telegram(msg.sender_id)
             react_action = '-'
             react_icon = ''
         return text_old, '{}{}'.format(react_action, react_icon), user
@@ -555,9 +555,10 @@ class TelegramHandler(object):
 
         # Reactions
         else:
-            if self.last_reaction == reaction.date:
-                return
-            self.last_reaction = reaction.date
+            if reaction:
+                if self.last_reaction == reaction.date:
+                    return
+                self.last_reaction = reaction.date
             action = 'React'
             text_old, edition_react, user = self.format_reaction(event.message, message_rendered, edition_case, reaction)
 
