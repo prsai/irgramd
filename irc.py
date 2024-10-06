@@ -532,11 +532,7 @@ class IRCHandler(object):
         await self.reply_code(user, 'RPL_ISUPPORT', (CHAN_MAX_LENGTH, NICK_MAX_LENGTH))
 
     async def send_help(self, user):
-        for line in (
-                      'Welcome to irgramd service',
-                      'use /msg {} help'.format(self.service_user.irc_nick),
-                      'to get help',
-                    ):
+        for line in self.service.initial_help():
             await self.send_msg(self.service_user, None, line, user)
 
     async def check_telegram_auth(self, user):

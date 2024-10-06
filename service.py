@@ -25,6 +25,14 @@ class service(command):
         self.irc = telegram.irc
         self.tmp_ircnick = None
 
+    def initial_help(self):
+        return (
+                  'Welcome to irgramd service',
+                  'use /msg {} help'.format(self.irc.service_user.irc_nick),
+                  'or equivalent in your IRC client',
+                  'to get help',
+               )
+
     async def handle_command_code(self, code=None, help=None):
         if not help:
             if self.ask_code:
