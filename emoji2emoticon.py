@@ -86,8 +86,12 @@ emo = {
         '\U0001f644': '"o o,"',
         '\U0001f914': '":-L"',
         '\U0001f92b': '":-o-m"',
-        '\U0001f970': '":)e>"'
+        '\U0001f970': '":)e>"',
       }
+
+emo_inv = {}
+for k in emo:
+  emo_inv[emo[k][1:-1]] = k
 
 def replace_mult(line, emo):
   for utf_emo in emo:

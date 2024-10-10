@@ -7,9 +7,12 @@
 # can be found in the LICENSE file included in this project.
 
 import os
-from telethon.errors.rpcerrorlist import MessageNotModifiedError, MessageAuthorRequiredError
+from telethon.tl.functions.messages import SendReactionRequest
+from telethon import types as tgty
+from telethon.errors.rpcerrorlist import MessageNotModifiedError, MessageAuthorRequiredError, ReactionInvalidError
 
 from utils import command, HELP
+from emoji2emoticon import emo_inv
 
 class exclam(command):
     def __init__(self, telegram):
@@ -21,6 +24,7 @@ class exclam(command):
             '!fwd':       (self.handle_command_fwd,                   2,  2, -1),
             '!upl':       (self.handle_command_upl,                   1,  2,  2),
             '!reupl':     (self.handle_command_reupl,                 2,  3,  3),
+            '!react':     (self.handle_command_react,                 2,  2, -1),
         }
         self.tg = telegram
         self.irc = telegram.irc
@@ -186,5 +190,34 @@ class exclam(command):
               '<compact_id> on current channel/chat. The file must be',
               'present in "upload" irgramd local directory or be an external',
               'HTTP/HTTPS URL.',
+            )
+        return reply
+
+    async def handle_command_react(self, cid=None, act=None, help=None):
+        if not help:
+            id, chk_msg = await self.check_msg(cid)
+            if chk_msg is not None:
+                if act in emo_inv:
+                    utf8_emo = emo_inv[act]
+                    reaction = [ tgty.ReactionEmoji(emoticon=utf8_emo) ]
+                    try:
+                        update = await self.tg.telegram_client(SendReactionRequest(self.tmp_telegram_id, id, reaction=reaction))
+                    except ReactionInvalidError:
+                        reply = ('!react: Reaction not allowed',)
+                    else:
+                        self.tmp_tg_msg = update.updates[0].message
+                        reply = True
+                else:
+                    reply = ('!react: Unknown reaction',)
+            else:
+                reply = ('!react: Unknown message to react',)
+        else: # HELP.brief or HELP.desc (first line)
+            reply = ('   !react      React to a message',)
+        if help == HELP.desc:  # rest of HELP.desc
+            reply += \
+            (
+              '   !react <compact_id> <emoticon reaction>',
+              'React with <emoticon reaction> to a message with <compact_id>,',
+              'irgramd will translate emoticon to closest emoji.',
             )
         return reply
