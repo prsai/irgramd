@@ -50,7 +50,7 @@ executed in a different host).
 - Forwards (receive, send)
 - Deletions (receive, do)
 - Editions (receive, do)
-- Reactions (receive)
+- Reactions (receive, send)
 - Polls (receive, show)
 - Actions [pin message, channel photo] (receive)
 - Dialogs management
