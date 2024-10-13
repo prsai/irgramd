@@ -505,8 +505,9 @@ class TelegramHandler(object):
         self.sorted_len_usernames.sort(key=lambda k: len(k), reverse=True)
 
     def format_reaction(self, msg, message_rendered, edition_case, reaction):
-        if len(message_rendered) > self.quote_len and not msg.is_reply:
-            text_old = '{}...'.format(message_rendered[:self.quote_len])
+        react_quote_len = self.quote_len * 2
+        if len(message_rendered) > react_quote_len:
+            text_old = '{}...'.format(message_rendered[:react_quote_len])
             text_old = fix_braces(text_old)
         else:
             text_old = message_rendered
