@@ -90,7 +90,7 @@ emo = {
       }
 
 emo_inv = {}
-for k in emo:
+for k in reversed(emo):
   emo_inv[emo[k][1:-1]] = k
 
 def replace_mult(line, emo):
