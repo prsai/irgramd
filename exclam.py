@@ -199,7 +199,7 @@ class exclam(command):
             if chk_msg is not None:
                 if act in emo_inv:
                     utf8_emo = emo_inv[act]
-                    reaction = [ tgty.ReactionEmoji(emoticon=utf8_emo) ]
+                    reaction = [ tgty.ReactionEmoji(emoticon=utf8_emo) ] if utf8_emo else None
                     try:
                         update = await self.tg.telegram_client(SendReactionRequest(self.tmp_telegram_id, id, reaction=reaction))
                     except ReactionInvalidError:
@@ -216,8 +216,9 @@ class exclam(command):
         if help == HELP.desc:  # rest of HELP.desc
             reply += \
             (
-              '   !react <compact_id> <emoticon reaction>',
+              '   !react <compact_id> <emoticon reaction>|-',
               'React with <emoticon reaction> to a message with <compact_id>,',
               'irgramd will translate emoticon to closest emoji.',
+              'Use - to remove a previous reaction.',
             )
         return reply

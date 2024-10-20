@@ -89,7 +89,7 @@ emo = {
         '\U0001f970': '":)e>"',
       }
 
-emo_inv = {}
+emo_inv = { '-': None }
 for k in reversed(emo):
   emo_inv[emo[k][1:-1]] = k
 
