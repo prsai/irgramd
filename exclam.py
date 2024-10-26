@@ -18,13 +18,13 @@ class exclam(command):
     def __init__(self, telegram):
         self.commands = \
         { # Command         Handler                       Arguments  Min Max Maxsplit
-            '!re':        (self.handle_command_re,                    2,  2,  2),
-            '!ed':        (self.handle_command_ed,                    2,  2,  2),
             '!del':       (self.handle_command_del,                   1,  1, -1),
+            '!ed':        (self.handle_command_ed,                    2,  2,  2),
             '!fwd':       (self.handle_command_fwd,                   2,  2, -1),
-            '!upl':       (self.handle_command_upl,                   1,  2,  2),
-            '!reupl':     (self.handle_command_reupl,                 2,  3,  3),
+            '!re':        (self.handle_command_re,                    2,  2,  2),
             '!react':     (self.handle_command_react,                 2,  2, -1),
+            '!reupl':     (self.handle_command_reupl,                 2,  3,  3),
+            '!upl':       (self.handle_command_upl,                   1,  2,  2),
         }
         self.tg = telegram
         self.irc = telegram.irc
