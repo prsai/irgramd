@@ -181,10 +181,12 @@ class TelegramHandler(object):
             if not user.is_self:
                 self.irc.irc_channels[chan].add(user_nick)
             # Add admin users as ops in irc
-            if isinstance(user.participant, tgty.ChatParticipantAdmin):
+            if isinstance(user.participant, tgty.ChatParticipantAdmin) or \
+               isinstance(user.participant, tgty.ChannelParticipantAdmin):
                 self.irc.irc_channels_ops[chan].add(user_nick)
             # Add creator users as founders in irc
-            elif isinstance(user.participant, tgty.ChatParticipantCreator):
+            elif isinstance(user.participant, tgty.ChatParticipantCreator) or \
+                 isinstance(user.participant, tgty.ChannelParticipantCreator):
                 self.irc.irc_channels_founder[chan].add(user_nick)
 
     def get_telegram_nick(self, user):
