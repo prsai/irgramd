@@ -574,9 +574,9 @@ class TelegramHandler(object):
         self.logger.debug('Handling Telegram Next Reaction (2nd, 3rd, ...): %s', pretty(event))
 
         reactions = event.reactions.recent_reactions
-        react = max(reactions, key=lambda y: y.date)
-        
-        if self.last_reaction != react.date:
+        react = max(reactions, key=lambda y: y.date) if reactions else None
+
+        if react and self.last_reaction != react.date:
             self.last_reaction = react.date
             id = event.msg_id
             msg = await self.telegram_client.get_messages(entity=event.peer, ids=id)
