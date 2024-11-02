@@ -18,7 +18,7 @@ import tornado.ioloop
 
 # Local modules
 
-from include import VERSION, CHAN_MAX_LENGTH, NICK_MAX_LENGTH
+from include import VERSION, CHAN_MAX_LENGTH, NICK_MAX_LENGTH, MAX_LINE
 from irc_replies import irc_codes
 from utils import chunks, set_replace, split_lines
 from service import service
@@ -259,7 +259,7 @@ class IRCHandler(object):
                 real_chan = self.get_realcaps_name(chan)
                 users_count = len(self.irc_channels[chan])
                 topic = await self.tg.get_channel_topic(chan, [None])
-                await self.reply_code(user, 'RPL_LIST', (real_chan, users_count, topic))
+                await self.reply_code(user, 'RPL_LIST', (real_chan, users_count, topic[:MAX_LINE]))
         await self.reply_code(user, 'RPL_LISTEND')
 
     async def handle_irc_names(self, user, channels):
@@ -612,7 +612,7 @@ class IRCHandler(object):
             founder = list(self.irc_channels_founder[chan])[0]
         else:
             founder = self.service_user.irc_nick
-        await self.reply_code(user, 'RPL_TOPIC', (channel, topic))
+        await self.reply_code(user, 'RPL_TOPIC', (channel, topic[:MAX_LINE]))
         await self.reply_code(user, 'RPL_TOPICWHOTIME', (channel, founder, timestamp))
 
     async def irc_namelist(self, user, channel):

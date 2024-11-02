@@ -15,7 +15,8 @@ import asyncio
 import collections
 import telethon
 from telethon import types as tgty, utils as tgutils
-from telethon.tl.functions.messages import GetMessagesReactionsRequest
+from telethon.tl.functions.messages import GetMessagesReactionsRequest, GetFullChatRequest
+from telethon.tl.functions.channels import GetFullChannelRequest
 
 # Local modules
 
@@ -309,8 +310,16 @@ class TelegramHandler(object):
         else:
             entity = await self.telegram_client.get_entity(tid)
             entity_cache[0] = entity
+        if isinstance(entity, tgty.Channel): 
+            full = await self.telegram_client(GetFullChannelRequest(channel=entity))
+        elif isinstance(entity, tgty.Chat):
+            full = await self.telegram_client(GetFullChatRequest(chat_id=tid))
+        else:
+            return ''
         entity_type = self.get_entity_type(entity, format='long')
-        return 'Telegram ' + entity_type + ' ' + str(tid) + ': ' + entity.title
+        topic = full.full_chat.about
+        sep = ': ' if topic else ''
+        return entity_type + sep + topic
 
     async def get_channel_creation(self, channel, entity_cache):
         tid = self.get_tid(channel)

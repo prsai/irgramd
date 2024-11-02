@@ -11,3 +11,4 @@
 VERSION                      = '0.2'
 NICK_MAX_LENGTH              = 20
 CHAN_MAX_LENGTH              = 50
+MAX_LINE                     = 400

@@ -20,6 +20,8 @@ import logging
 FILENAME_INVALID_CHARS = re.compile('[/{}<>()"\'\\|&#%?]')
 SIMPLE_URL = re.compile('http(|s)://[^ ]+')
 
+from include import MAX_LINE
+
 # Utilities
 
 class command:
@@ -61,9 +63,8 @@ def get_continued(items, mark, length):
     return (x + mark if n != length else x for n, x in enumerate(items, start=1))
 
 def split_lines(message):
-    MAX = 400
     messages_limited = []
-    wr = textwrap.TextWrapper(width=MAX)
+    wr = textwrap.TextWrapper(width=MAX_LINE)
 
     # Split when Telegram original message has breaks
     messages = message.splitlines()
