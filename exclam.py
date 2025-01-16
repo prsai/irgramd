@@ -205,8 +205,8 @@ class exclam(command):
                     except ReactionInvalidError:
                         reply = ('!react: Reaction not allowed',)
                     else:
-                        self.tmp_tg_msg = update.updates[0].message
-                        reply = True
+                        self.tmp_tg_msg = getattr(update.updates[0], 'message', None)
+                        reply = bool(self.tmp_tg_msg)
                 else:
                     reply = ('!react: Unknown reaction',)
             else:
