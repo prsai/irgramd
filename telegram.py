@@ -177,18 +177,21 @@ class TelegramHandler(object):
         self.irc.iid_to_tid[chan] = chat.id
         self.irc.irc_channels[chan] = set()
         # Add users from the channel
-        async for user in self.telegram_client.iter_participants(chat.id):
-            user_nick = self.set_ircuser_from_telegram(user)
-            if not user.is_self:
-                self.irc.irc_channels[chan].add(user_nick)
-            # Add admin users as ops in irc
-            if isinstance(user.participant, tgty.ChatParticipantAdmin) or \
-               isinstance(user.participant, tgty.ChannelParticipantAdmin):
-                self.irc.irc_channels_ops[chan].add(user_nick)
-            # Add creator users as founders in irc
-            elif isinstance(user.participant, tgty.ChatParticipantCreator) or \
-                 isinstance(user.participant, tgty.ChannelParticipantCreator):
-                self.irc.irc_channels_founder[chan].add(user_nick)
+        try:
+            async for user in self.telegram_client.iter_participants(chat.id):
+                user_nick = self.set_ircuser_from_telegram(user)
+                if not user.is_self:
+                    self.irc.irc_channels[chan].add(user_nick)
+                # Add admin users as ops in irc
+                if isinstance(user.participant, tgty.ChatParticipantAdmin) or \
+                   isinstance(user.participant, tgty.ChannelParticipantAdmin):
+                    self.irc.irc_channels_ops[chan].add(user_nick)
+                # Add creator users as founders in irc
+                elif isinstance(user.participant, tgty.ChatParticipantCreator) or \
+                     isinstance(user.participant, tgty.ChannelParticipantCreator):
+                    self.irc.irc_channels_founder[chan].add(user_nick)
+        except:
+            self.logger.warning('Not possible to get participants of channel %s', channel)
 
     def get_telegram_nick(self, user):
         nick = (user.username
