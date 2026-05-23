@@ -28,7 +28,7 @@ from exclam import exclam
 
 SRV = None
 ALL_PARAMS = 16
-VALID_IRC_NICK_FIRST_CHARS   = string.ascii_letters + '[]\`_^{|}'
+VALID_IRC_NICK_FIRST_CHARS   = string.ascii_letters + r'[]\`_^{|}'
 VALID_IRC_NICK_CHARS         = VALID_IRC_NICK_FIRST_CHARS + string.digits + '-'
 
 # IRC Regular Expressions
