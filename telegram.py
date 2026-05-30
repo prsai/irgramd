@@ -23,7 +23,7 @@ from telethon.tl.functions.channels import GetFullChannelRequest
 from include import CHAN_MAX_LENGTH, NICK_MAX_LENGTH
 from irc import IRCUser
 from utils import sanitize_filename, add_filename, is_url_equiv, extract_url, get_human_size, get_human_duration
-from utils import get_highlighted, fix_braces, format_timestamp, pretty, current_date
+from utils import get_highlighted, fix_braces, format_timestamp, pretty, current_date, token
 import emoji2emoticon as e
 
 # Test IP table
@@ -44,6 +44,8 @@ class TelegramHandler(object):
         self.notice_size = settings['download_notice'] * 1048576
         self.media_dir  = settings['media_dir']
         self.media_url  = settings['media_url']
+        if self.media_url[-1:] != '/':
+            self.media_url += '/'
         self.upload_dir = settings['upload_dir']
         self.api_id     = settings['api_id']
         self.api_hash   = settings['api_hash']
@@ -59,7 +61,8 @@ class TelegramHandler(object):
         self.geo_url    = settings['geo_url']
         if not settings['emoji_ascii']:
             e.emo = {}
-        self.media_cn   = 0
+        self.token = token('+0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz')
+        self.filename_token = self.token.gen_token(5)
         self.irc        = irc
         self.authorized = False
         self.id	= None
@@ -1028,30 +1031,25 @@ class TelegramHandler(object):
         if not self.download:
             return ''
         if filename:
-            idd_file = add_filename(filename, mid)
-            new_file = sanitize_filename(idd_file)
-            new_path = os.path.join(self.telegram_media_dir, new_file)
-            if os.path.exists(new_path):
-                local_path = new_path
+            aux_file = filename
+        else:
+            if hasattr(message, 'file') and message.file is not None:
+                aux_file = self.filename_token + message.file.ext
             else:
-                await self.notice_downloading(size, relay_attr)
-                local_path = await message.download_media(new_path)
-                if not local_path: return ''
+                aux_file = self.filename_token
+
+        idd_file = add_filename(aux_file, mid)
+        new_file = sanitize_filename(idd_file)
+        new_path = os.path.join(self.telegram_media_dir, new_file)
+        if os.path.exists(new_path) and (size == 0 or size == os.path.getsize(new_path)):
+            local_path = new_path
         else:
             await self.notice_downloading(size, relay_attr)
-            local_path = await message.download_media(self.telegram_media_dir)
+            local_path = await message.download_media(new_path)
             if not local_path: return ''
-            filetype = os.path.splitext(local_path)[1]
-            gen_file = str(self.media_cn) + filetype
-            idd_file = add_filename(gen_file, mid)
-            new_file = sanitize_filename(idd_file)
-            self.media_cn += 1
-            new_path = os.path.join(self.telegram_media_dir, new_file)
 
         if local_path != new_path:
             os.replace(local_path, new_path)
-        if self.media_url[-1:] != '/':
-            self.media_url += '/'
         return self.media_url + new_file
 
     async def notice_downloading(self, size, relay_attr):
