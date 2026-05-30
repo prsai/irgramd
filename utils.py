@@ -18,7 +18,7 @@ import random
 
 # Constants
 
-FILENAME_INVALID_CHARS = re.compile('[/{}<>()"\'\\|&#%?]')
+FILENAME_INVALID_CHARS = re.compile('[\0-\x1F/{}<>"\'\\|*&#%?\x7F]')
 SIMPLE_URL = re.compile('http(|s)://[^ ]+')
 
 from include import MAX_LINE
@@ -87,12 +87,11 @@ def split_lines(message):
     return messages_limited
 
 def sanitize_filename(fn):
-    cn = str(sanitize_filename.cn)
-    new_fn, ns = FILENAME_INVALID_CHARS.subn(cn, fn)
-    if ns:
-        sanitize_filename.cn += 1
-    return new_fn.strip('-').replace(' ','_')
-sanitize_filename.cn = 0
+    def hexize(m):
+        return '-{:x}-'.format(ord(m.group(0)))
+
+    new_fn = FILENAME_INVALID_CHARS.sub(hexize, fn)
+    return new_fn.lstrip('-').replace(' ','_')
 
 def add_filename(filename, add):
     if add:
