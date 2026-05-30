@@ -98,11 +98,13 @@ def add_filename(filename, add):
     if add:
         aux = filename.rsplit('.', 1)
         name = aux[0]
+        last_dot = '.'
         try:
             ext = aux[1]
         except:
             ext = ''
-        return '{}-{}.{}'.format(name, add, ext)
+            last_dot = ''
+        return '{}-{}{}{}'.format(name, add, last_dot, ext)
     else:
         return filename
 
