@@ -1,7 +1,7 @@
 # irgramd: IRC-Telegram gateway
 # exclam.py: IRC exclamation command handlers
 #
-# Copyright (c) 2023, 2024 E. Bosch <presidev@AT@gmail.com>
+# Copyright (c) 2023-2025 E. Bosch <presidev@AT@gmail.com>
 #
 # Use of this source code is governed by a MIT style license that
 # can be found in the LICENSE file included in this project.

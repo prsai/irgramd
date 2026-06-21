@@ -1,7 +1,7 @@
 # irgramd: IRC-Telegram gateway
 # emoji2emoticon.py: UTF-8 Emoji to ASCII emoticon replacement
 #
-# (C) Copyright 2019,2023 E. Bosch <presidev@AT@gmail.com>
+# (C) Copyright 2019,2023,2025 E. Bosch <presidev@AT@gmail.com>
 #
 # Use of this source code is governed by a MIT style license that
 # can be found in the LICENSE file included in this project.

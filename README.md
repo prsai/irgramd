@@ -125,7 +125,7 @@ totally optional, if not used, the module pyPAM is not needed.
 ## License
 
 Copyright (c) 2019 Peter Bui <pbui@bx612.space>  
-Copyright (c) 2020-2024 E. Bosch <presidev@AT@gmail.com>
+Copyright (c) 2020-2026 E. Bosch <presidev@AT@gmail.com>
 
 Use of this source code is governed by a MIT style license that
 can be found in the LICENSE file included in this project.
