@@ -154,7 +154,7 @@ class IRCHandler(object):
     # IRC handlers
 
     async def handle_irc_pass(self, user, password):
-        self.logger.debug('Handling PASS: %s %s', password)
+        self.logger.debug('Handling PASS: %s', password)
 
         if user.registered:
             await self.reply_code(user, 'ERR_ALREADYREGISTRED')
@@ -487,7 +487,13 @@ class IRCHandler(object):
         await self.send_irc_command(user, ':{} PRIVMSG {} :{}'.format(src_mask, tgt, msg))
 
     async def reply_command(self, user, prfx, comm, params):
-        prefix = self.gethostname(user) if prfx == SRV else prfx.get_irc_mask()
+        if prfx == SRV:
+            prefix = self.gethostname(user)
+        elif isinstance(prfx, str):
+            prefix_user = self.users.get(prfx.lower())
+            prefix = prefix_user.get_irc_mask() if prefix_user else prfx
+        else:
+            prefix = prfx.get_irc_mask()
         p = len(params)
         if p == 1:
             fstri = ':{} {} {}'
