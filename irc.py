@@ -155,7 +155,7 @@ class IRCHandler(object):
     # IRC handlers
 
     async def handle_irc_pass(self, user, password):
-        self.logger.debug('Handling PASS: %s %s', password)
+        self.logger.debug('Handling PASS: %s', password)
 
         if user.registered:
             await self.reply_code(user, 'ERR_ALREADYREGISTRED')
