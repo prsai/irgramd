@@ -89,6 +89,7 @@ if __name__ == '__main__':
     tornado.options.define('emoji_ascii', default=False, help='Replace emoji with ASCII emoticons')
     tornado.options.define('geo_url', type=str, default=None, metavar='TEMPLATE_URL', help='Use custom URL for showing geo latitude/longitude location, eg. OpenStreetMap')
     tornado.options.define('hist_timestamp_format', metavar='DATETIME_FORMAT', help='Format string for timestamps in history, see https://www.strfti.me')
+    tornado.options.define('initial_help', default=True, help='Enable/disable initial help message from service user [TelegramServ]')
     tornado.options.define('irc_address', default='127.0.0.1', metavar='ADDRESS', help='Address to listen on for IRC')
     tornado.options.define('irc_nicks', type=str, multiple=True, metavar='nick,..', help='List of nicks allowed for IRC, if `pam` and optionally `pam_group` are set, PAM authentication will be used instead')
     tornado.options.define('irc_password', default='', metavar='PASSWORD', help='Password for IRC authentication, if `pam` is set, PAM authentication will be used instead')

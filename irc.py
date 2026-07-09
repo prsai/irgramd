@@ -439,7 +439,8 @@ class IRCHandler(object):
 
         user.registered = True
         await self.send_greeting(user)
-        await self.send_help(user)
+        if self.conf['initial_help']:
+            await self.send_help(user)
         await self.check_telegram_auth(user)
 
     async def send_msg(self, source, target, message, selfuser=None):
