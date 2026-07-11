@@ -134,7 +134,7 @@ can be found in the LICENSE file included in this project.
 [IRC]: https://en.wikipedia.org/wiki/Internet_Relay_Chat
 [Telegram]: https://telegram.org/
 [python]: https://www.python.org/
-[Telethon]: https://github.com/LonamiWebs/Telethon
+[Telethon]: https://codeberg.org/Lonami/Telethon
 [irgramd primary repository]: https://src.presi.org/darcs/irgramd
 [darcs]: http://darcs.net
 [project management and secondary repository]: https://github.com/prsai/irgramd
