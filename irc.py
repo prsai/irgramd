@@ -540,14 +540,7 @@ class IRCHandler(object):
     async def check_telegram_auth(self, user):
         await self.tg.auth_checked.wait()
         if not self.tg.authorized and not self.tg.ask_code:
-            for line in (
-                          '----',
-                          'Your Telegram account is not authorized yet,',
-                          'you must supply the code that Telegram sent to your phone',
-                          'or another client that is currently connected',
-                          'use /msg {} code <code>'.format(self.service_user.irc_nick),
-                          'e.g. /msg {} code 12345'.format(self.service_user.irc_nick),
-                        ):
+            for line in self.service.auth_help():
                 await self.send_msg(self.service_user, user.irc_nick, line)
 
     async def send_users_irc(self, prfx, command, params):

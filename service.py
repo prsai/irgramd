@@ -33,6 +33,16 @@ class service(command):
                   'to get help',
                )
 
+    def auth_help(self):
+        return (
+                  '----',
+                  'Your Telegram account is not authorized yet,',
+                  'you must supply the code that Telegram sent to your phone',
+                  'or another client that is currently connected',
+                  'use /msg {} code <code>'.format(self.irc.service_user.irc_nick),
+                  'e.g. /msg {} code 12345'.format(self.irc.service_user.irc_nick)
+               )
+
     async def handle_command_code(self, code=None, help=None):
         if not help:
             if self.ask_code:
