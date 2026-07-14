@@ -21,6 +21,7 @@ class service(command):
             'mark_read':   (self.handle_command_mark_read,            1,  1, -1),
         }
         self.ask_code = settings['ask_code']
+        self.init_help = settings['initial_help']
         self.tg = telegram
         self.irc = telegram.irc
         self.tmp_ircnick = None
@@ -34,8 +35,9 @@ class service(command):
                )
 
     def auth_help(self):
+        sep = '----' if self.init_help else ''
         return (
-                  '----',
+                  sep,
                   'Your Telegram account is not authorized yet,',
                   'you must supply the code that Telegram sent to your phone',
                   'or another client that is currently connected',
