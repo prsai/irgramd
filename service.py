@@ -8,12 +8,13 @@
 
 from utils import compact_date, command, HELP
 from telethon import utils as tgutils
+from telethon.errors.rpcerrorlist import SessionPasswordNeededError
 
 class service(command):
     def __init__(self, settings, telegram):
         self.commands = \
         { # Command         Handler                       Arguments  Min Max Maxsplit
-            'code':        (self.handle_command_code,                 1,  1, -1),
+            'code':        (self.handle_command_code,                 1,  2, -1),
             'dialog':      (self.handle_command_dialog,               1,  2, -1),
             'get':         (self.handle_command_get,                  2,  2, -1),
             'help':        (self.handle_command_help,                 0,  1, -1),
@@ -41,34 +42,46 @@ class service(command):
                   'Your Telegram account is not authorized yet,',
                   'you must supply the code that Telegram sent to your phone',
                   'or another client that is currently connected',
-                  'use /msg {} code <code>'.format(self.irc.service_user.irc_nick),
-                  'e.g. /msg {} code 12345'.format(self.irc.service_user.irc_nick)
+                  'use /msg or equivalent in your IRC client',
+                  'e.g. /msg {} code 12345'.format(self.irc.service_user.irc_nick),
+                  'If 2nd authentication factor (2FA) password is enabled in',
+                  'your account, you must provide it as well',
+                  'e.g. /msg {} code 12345 password'.format(self.irc.service_user.irc_nick),
                )
 
-    async def handle_command_code(self, code=None, help=None):
+    async def handle_command_code(self, code=None, passw=None, help=None):
         if not help:
             if self.ask_code:
                 reply = ('Code will be asked on console',)
             elif code.isdigit():
+                valid_auth = True
                 try:
                     await self.tg.telegram_client.sign_in(code=code)
+                except SessionPasswordNeededError:
+                    try:
+                        await self.tg.telegram_client.sign_in(password=passw)
+                    except:
+                        reply = ('Invalid 2FA password',)
+                        valid_auth = False
                 except:
                     reply = ('Invalid code',)
-                else:
-                    reply = ('Valid code', 'Telegram account authorized')
+                    valid_auth = False
+                if valid_auth:
+                    reply = ('Valid authentication', 'Telegram account authorized')
                     await self.tg.continue_auth()
             else: # not isdigit
                 reply = ('Code must be numeric',)
 
         else: # HELP.brief or HELP.desc (first line)
-            reply = ('   code        Enter authorization code',)
+            reply = ('   code        Enter authorization code and 2FA password',)
         if help == HELP.desc:  # rest of HELP.desc
             reply += \
             (
-              '   code <code>',
+              '   code <code> [<password>]',
               'Enter authorization code sent by Telegram to the phone or to',
-              'another client connected.',
-              'This authorization code usually is only needed the first time',
+              'another client connected. If 2nd factor authentication (2FA) password',
+              'is enabled in your account, must be provided too.',
+              'This authentication usually is only needed the first time',
               'that irgramd connects to Telegram with a given account.',
             )
         return reply

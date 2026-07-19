@@ -55,6 +55,7 @@ executed in a different host).
 - Actions [pin message, channel photo] (receive)
 - Dialogs management
 - History
+- Login code and 2FA password support for Telegram
 - Authentication and TLS for IRC
 - Multiple connections from IRC
 
@@ -63,7 +64,6 @@ executed in a different host).
 - [python] (>= v3.9)
 - [telethon] (tested with v1.28.5)
 - [tornado] (tested with v6.1.0)
-- [aioconsole] (tested with v0.6.1)
 - [pyPAM] (optional, tested with v0.4.2-13.4 from deb, [legacy web](https://web.archive.org/web/20110316070059/http://www.pangalactic.org/PyPAM/))
 
 ## Instalation

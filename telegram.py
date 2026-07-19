@@ -10,13 +10,14 @@
 import logging
 import os
 import re
-import aioconsole
 import asyncio
 import collections
 import telethon
+from getpass import getpass
 from telethon import types as tgty, utils as tgutils
 from telethon.tl.functions.messages import GetMessagesReactionsRequest, GetFullChatRequest
 from telethon.tl.functions.channels import GetFullChannelRequest
+from telethon.errors.rpcerrorlist import SessionPasswordNeededError
 
 # Local modules
 
@@ -123,19 +124,41 @@ class TelegramHandler(object):
         else:
             await self.telegram_client.connect()
 
-        while not await self.telegram_client.is_user_authorized():
+        if not await self.telegram_client.is_user_authorized():
             self.logger.info('Telegram account not authorized')
             await self.telegram_client.send_code_request(self.phone)
             self.auth_checked.set()
             if not self.ask_code:
                 return
-            self.logger.info('You must provide the Login code that Telegram will '
-                             'sent you via SMS or another connected client')
-            code = await aioconsole.ainput('Login code: ')
+            attempts_msg = ('After 3 failed authentication attempts, aborted. '
+                            'Please restart irgramd to try again')
+            count = 1
+        while not await self.telegram_client.is_user_authorized():
+            if count > 3:
+                self.logger.error(attempts_msg)
+                return
+            await asyncio.to_thread(print, 'You must provide the Login code that Telegram will '
+                                           'sent you via SMS or another connected client')
+            code = await asyncio.to_thread(input, 'Login code: ')
             try:
                 await self.telegram_client.sign_in(code=code)
-            except:
-                pass
+            except SessionPasswordNeededError:
+                count = 1
+                while not await self.telegram_client.is_user_authorized():
+                    if count > 3:
+                        self.logger.error(attempts_msg)
+                        return
+                    await asyncio.to_thread(print, '2nd factor authentication (2FA) password is enabled '
+                                                   'in your account, you must provide it')
+                    passw = await asyncio.to_thread(getpass, 'Password (not shown): ')
+                    try:
+                        await self.telegram_client.sign_in(password=passw)
+                    except BaseException as err:
+                        self.logger.error(repr(err))
+                    count += 1
+            except BaseException as err:
+                self.logger.error(repr(err))
+            count += 1
 
         await self.continue_auth()
 
