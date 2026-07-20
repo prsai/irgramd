@@ -32,11 +32,11 @@ class exclam(command):
         self.tmp_telegram_id = None
         self.tmp_tg_msg = None
 
-    async def command(self, message, telegram_id, user):
+    async def command(self, message, target, telegram_id, user):
         self.tmp_telegram_id = telegram_id
         res = await self.parse_command(message, nick=None)
         if isinstance(res, tuple):
-            await self.irc.send_msg(self.irc.service_user, None, res[0], user)
+            await self.irc.send_msg(self.irc.service_user, target, res[0], user)
             res = False
         return res, self.tmp_tg_msg
 

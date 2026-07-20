@@ -412,7 +412,7 @@ class IRCHandler(object):
             message = self.tg.replace_mentions(message, me_nick='', received=False)
             telegram_id = self.iid_to_tid[tgt]
             if message[0] == '!':
-                cont, tg_msg = await self.exclam.command(message, telegram_id, user)
+                cont, tg_msg = await self.exclam.command(message, target, telegram_id, user)
             else:
                 tg_msg = await self.tg.telegram_client.send_message(telegram_id, message)
                 cont = True
