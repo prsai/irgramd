@@ -645,8 +645,7 @@ class TelegramHandler(object):
                 await self.relay_telegram_message(message=None, user=user, text=text, channel=chan)
                 self.to_volatile_cache(self.prev_id, deleted_id, text, user, chan, current_date())
             else:
-                text = 'Message id {} deleted not in cache'.format(deleted_id)
-                await self.relay_telegram_private_message(self.irc.service_user, text)
+                self.logger.info('Message id {} deleted not in cache'.format(deleted_id))
 
     async def handle_raw(self, update):
         self.logger.debug('Handling Telegram Raw Event: %s', pretty(update))
