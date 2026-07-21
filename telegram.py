@@ -57,6 +57,7 @@ class TelegramHandler(object):
         self.test_port  = settings['test_port']
         self.ask_code   = settings['ask_code']
         self.quote_len  = settings['quote_length']
+        self.show_react = settings['show_reactions']
         self.hist_fmt   = settings['hist_timestamp_format']
         self.timezone   = settings['timezone']
         self.geo_url    = settings['geo_url']
@@ -596,6 +597,8 @@ class TelegramHandler(object):
 
         # Reactions
         else:
+            if not self.show_react:
+                return
             if reaction:
                 if self.last_reaction == reaction.date:
                     return
@@ -611,6 +614,8 @@ class TelegramHandler(object):
         self.to_volatile_cache(self.prev_id, id, text, user, chan, current_date())
 
     async def handle_next_reaction(self, event):
+        if not self.show_react:
+            return
         self.logger.debug('Handling Telegram Next Reaction (2nd, 3rd, ...): %s', pretty(event))
 
         reactions = event.reactions.recent_reactions
