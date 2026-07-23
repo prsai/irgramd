@@ -60,6 +60,7 @@ class TelegramHandler(object):
         self.hist_fmt   = settings['hist_timestamp_format']
         self.timezone   = settings['timezone']
         self.geo_url    = settings['geo_url']
+        self.log_del    = settings['log_deleted']
         if not settings['emoji_ascii']:
             e.emo = {}
         self.token = token('+0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz')
@@ -645,8 +646,11 @@ class TelegramHandler(object):
                 await self.relay_telegram_message(message=None, user=user, text=text, channel=chan)
                 self.to_volatile_cache(self.prev_id, deleted_id, text, user, chan, current_date())
             else:
-                text = 'Message id {} deleted not in cache'.format(deleted_id)
-                await self.relay_telegram_private_message(self.irc.service_user, text)
+                if self.log_del:
+                    self.logger.info('Message id {} deleted not in cache'.format(deleted_id))
+                else:
+                    text = 'Message id {} deleted not in cache'.format(deleted_id)
+                    await self.relay_telegram_private_message(self.irc.service_user, text)
 
     async def handle_raw(self, update):
         self.logger.debug('Handling Telegram Raw Event: %s', pretty(update))

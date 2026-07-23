@@ -94,6 +94,7 @@ if __name__ == '__main__':
     tornado.options.define('irc_nicks', type=str, multiple=True, metavar='nick,..', help='List of nicks allowed for IRC, if `pam` and optionally `pam_group` are set, PAM authentication will be used instead')
     tornado.options.define('irc_password', default='', metavar='PASSWORD', help='Password for IRC authentication, if `pam` is set, PAM authentication will be used instead')
     tornado.options.define('irc_port', type=int, default=None, metavar='PORT', help='Port to listen on for IRC. (default 6667, default with TLS 6697)')
+    tornado.options.define('log_deleted', default=False, help='Deleted messages not in cache are logged, if disabled service user [TelegramServ] will notify them')
     tornado.options.define('log_file', default=None, metavar='PATH', help='File where logs are appended, if not set will be stderr')
     tornado.options.define('log_level', default='INFO', metavar='DEBUG|INFO|WARNING|ERROR|CRITICAL|NONE', help='The log level (and any higher to it) that will be logged')
     tornado.options.define('media_dir', default=None, metavar='PATH', help='Directory where Telegram media files are downloaded, default "media" in `cache_dir`')
