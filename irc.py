@@ -111,7 +111,7 @@ class IRCHandler(object):
     def set_telegram(self, tg):
         self.tg = tg
         self.service = service(self.conf, self.tg)
-        self.exclam = exclam(self.tg)
+        self.exclam = exclam(self.tg, self.service)
 
     # IRC
 

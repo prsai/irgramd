@@ -15,17 +15,21 @@ from utils import command, HELP
 from emoji2emoticon import emo_inv
 
 class exclam(command):
-    def __init__(self, telegram):
+    def __init__(self, telegram, service):
         self.commands = \
         { # Command         Handler                       Arguments  Min Max Maxsplit
             '!del':       (self.handle_command_del,                   1,  1, -1),
             '!ed':        (self.handle_command_ed,                    2,  2,  2),
             '!fwd':       (self.handle_command_fwd,                   2,  2, -1),
+            '!get':       (self.handle_command_get,                   1,  1, -1),
+            '!history':   (self.handle_command_history,               0,  2, -1),
+            '!mark_read': (self.handle_command_mark_read,             0,  0, -1),
             '!re':        (self.handle_command_re,                    2,  2,  2),
             '!react':     (self.handle_command_react,                 2,  2, -1),
             '!reupl':     (self.handle_command_reupl,                 2,  3,  3),
             '!upl':       (self.handle_command_upl,                   1,  2,  2),
         }
+        self.service = service
         self.tg = telegram
         self.irc = telegram.irc
         self.tmp_ircnick = None
@@ -36,7 +40,8 @@ class exclam(command):
         self.tmp_telegram_id = telegram_id
         res = await self.parse_command(message, nick=None)
         if isinstance(res, tuple):
-            await self.irc.send_msg(self.irc.service_user, None, res[0], user)
+            if len(res) > 0:
+                await self.irc.send_msg(self.irc.service_user, None, res[0], user)
             res = False
         return res, self.tmp_tg_msg
 
@@ -222,3 +227,54 @@ class exclam(command):
               'Use - to remove a previous reaction.',
             )
         return reply
+
+    async def handle_command_get(self, mid=None, help=None):
+        if not help:
+            peer = None
+            if self.tmp_telegram_id in self.tg.tid_to_iid:
+                peer = self.tg.tid_to_iid[self.tmp_telegram_id]
+            reply = await self.service.handle_command_get(peer, mid, help)
+            return reply if isinstance(reply, tuple) else False
+        else: # HELP.brief or HELP.desc (first line)
+            return ('   !get        Get a message by id and peer',)
+        if help == HELP.desc:  # rest of HELP.desc
+            return (
+              '   !get <compact_id|=ID>',
+              'Get one message from current channel/chat with the compact',
+              'or absolute ID',
+            )
+
+    async def handle_command_history(self, limit='10', add_unread=None, help=None):
+        if not help:
+            peer = None
+            if self.tmp_telegram_id in self.tg.tid_to_iid:
+                peer = self.tg.tid_to_iid[self.tmp_telegram_id]
+            reply = await self.service.handle_command_history(peer, limit, add_unread, help)
+            return reply if isinstance(reply, tuple) else False
+        else: # HELP.brief or HELP.desc (first line)
+            return ('   !history    Get messages from history',)
+        if help == HELP.desc:  # rest of HELP.desc
+            return (
+              '   !history [<limit>|all|unread [<plusN>]]',
+              'Get last <limit> number of messages already sent on current',
+              'channel/chat. If not set <limit> is 10.',
+              'Instead of <limit>, "unread" is for messages not marked as read,',
+              'optionally <plusN> number of previous messages to the first unread.',
+              'Instead of <limit>, "all" is for retrieving all available messages',
+            )
+
+    async def handle_command_mark_read(self, help=None):
+        if not help:
+            peer = None
+            if self.tmp_telegram_id in self.tg.tid_to_iid:
+                peer = self.tg.tid_to_iid[self.tmp_telegram_id]
+            reply = await self.service.handle_command_mark_read(peer, help)
+            return reply if isinstance(reply, tuple) else False
+        else: # HELP.brief or HELP.desc (first line)
+            return ('   !mark_read  Mark messages as read',)
+        if help == HELP.desc:  # rest of HELP.desc
+            return (
+              '   !mark_read',
+              'Mark all messages on current channel/chat as read, this also will',
+              'reset the number of mentions to you on current channel/chat.',
+            )
