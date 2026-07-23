@@ -21,7 +21,7 @@ import tornado.ioloop
 
 from include import VERSION, CHAN_MAX_LENGTH, NICK_MAX_LENGTH, MAX_LINE
 from irc_replies import irc_codes
-from utils import chunks, set_replace, split_lines
+from utils import chunks, set_replace, split_lines, format_timestamp
 from service import service
 from exclam import exclam
 
@@ -35,6 +35,9 @@ VALID_IRC_NICK_CHARS         = VALID_IRC_NICK_FIRST_CHARS + string.digits + '-'
 # IRC Regular Expressions
 
 PREFIX          = r'(?ai)(:[^ ]+ +|)'
+IRC_CAP_LS_RX   = re.compile(PREFIX + r'CAP +(LS|LIST)( +.*)*')
+IRC_CAP_END_RX  = re.compile(PREFIX + r'CAP +(END)( +.*)*')
+IRC_CAP_REQ_RX  = re.compile(PREFIX + r'CAP +REQ( +:?(?P<extensions>[^\n]+))?')
 IRC_JOIN_RX     = re.compile(PREFIX + r'JOIN( +:| +|\n)(?P<channels>[^\n ]+|)')
 IRC_LIST_RX     = re.compile(PREFIX + r'LIST( +:| +|\n)(?P<channels>[^\n ]+|)')
 IRC_MODE_RX     = re.compile(PREFIX + r'MODE( +|\n)(?P<target>[^ ]+( +|\n)|)(?P<mode>[^ ]+( +|\n)|)(?P<arguments>[^\n]+|)')
@@ -119,6 +122,9 @@ class IRCHandler(object):
         self.irc_handlers = \
         (
             # pattern              handle           register_required   num_params_required
+            (IRC_CAP_LS_RX,   self.handle_irc_cap_ls,   False,            0),
+            (IRC_CAP_END_RX,  self.handle_irc_cap_end,  False,            0),
+            (IRC_CAP_REQ_RX,  self.handle_irc_cap_req,  False,            1),
             (IRC_PRIVMSG_RX,  self.handle_irc_privmsg,  True,             ALL_PARAMS),
             (IRC_PING_RX,     self.handle_irc_ping,     True,             ALL_PARAMS),
             (IRC_JOIN_RX,     self.handle_irc_join,     True,             ALL_PARAMS),
@@ -153,6 +159,34 @@ class IRCHandler(object):
         user.stream.write(command.encode(self.conf['char_out_encoding'], errors='replace'))
 
     # IRC handlers
+
+    async def handle_irc_cap_end(self, user, **args):
+        self.logger.debug('Handling CAP END')
+        user.asking_capabilities = False
+        await self.register(user)
+
+    async def handle_irc_cap_ls(self, user, **args):
+        self.logger.debug('Handling CAP LS')
+        if not user.registered:
+            user.asking_capabilities = True
+        await self.reply_command(user, SRV, 'CAP', ('*', 'LS', 'server-time message-tags'))
+
+    async def handle_irc_cap_req(self, user, extensions):
+        self.logger.debug('Handling CAP REQ: %s', extensions)
+        if not user.registered:
+            user.asking_capabilities = True
+        for extension in extensions.split():
+            if extension not in ['server-time', 'message-tags']:
+                await self.reply_command(user, SRV, 'CAP', (
+                  user.irc_username if user.irc_username else '*',
+                  'NAK',
+                  ' '.join(extensions.split())))
+                return
+        user.extensions.extend(extensions.split())
+        await self.reply_command(user, SRV, 'CAP', (
+            user.irc_username if user.irc_username else '*',
+            'ACK',
+            ' '.join(extensions.split())))
 
     async def handle_irc_pass(self, user, password):
         self.logger.debug('Handling PASS: %s', password)
@@ -435,6 +469,8 @@ class IRCHandler(object):
 
     # IRC functions
     async def register(self, user):
+        if user.asking_capabilities:
+            return
         self.logger.info('Registered IRC user "%s" from %s:%s', user.irc_nick, user.address, user.port)
 
         user.registered = True
@@ -443,7 +479,7 @@ class IRCHandler(object):
             await self.send_help(user)
         await self.check_telegram_auth(user)
 
-    async def send_msg(self, source, target, message, selfuser=None):
+    async def send_msg(self, source, target, message, selfuser=None, timestamp=None):
         messages = split_lines(message)
         tgt = target.lower() if target else ''
         is_chan = tgt in self.irc_channels.keys()
@@ -458,7 +494,7 @@ class IRCHandler(object):
                 irc_users = (u for u in self.users.values() if u.stream)
 
             for irc_user in irc_users:
-                await self.send_privmsg(irc_user, source_mask, target, msg)
+                await self.send_privmsg(irc_user, source_mask, target, msg, timestamp=timestamp)
 
     async def send_msg_others(self, source, target, message):
         source_mask = source.get_irc_mask()
@@ -472,11 +508,11 @@ class IRCHandler(object):
         for irc_user in irc_users:
             await self.send_privmsg(irc_user, source_mask, target, message)
 
-    async def send_action(self, source, target, message):
+    async def send_action(self, source, target, message, timestamp=None):
         action_message = '\x01ACTION {}\x01'.format(message)
-        await self.send_msg(source, target, action_message)
+        await self.send_msg(source, target, action_message, timestamp=timestamp)
 
-    async def send_privmsg(self, user, source_mask, target, msg):
+    async def send_privmsg(self, user, source_mask, target, msg, timestamp=None):
         # reference [1]
         src_mask = source_mask if source_mask else user.get_irc_mask()
         # target None (False): it's private, not a channel
@@ -486,7 +522,14 @@ class IRCHandler(object):
         # replace self @username and other mentions for self messages sent by this instance of irgramd
         msg = self.tg.replace_mentions(msg, user.irc_nick)
 
-        await self.send_irc_command(user, ':{} PRIVMSG {} :{}'.format(src_mask, tgt, msg))
+        tags = ''
+        if timestamp:
+            if 'server-time' in user.extensions:
+                tags = '@time=' + format_timestamp('%FT%T.000Z', 'UTC', timestamp) + ' '
+            else:
+                msg = '{} {}'.format(
+                  format_timestamp(self.conf['hist_timestamp_format'], self.conf['timezone'], timestamp), msg)
+        await self.send_irc_command(user, '{}:{} PRIVMSG {} :{}'.format(tags, src_mask, tgt, msg))
 
     async def reply_command(self, user, prfx, comm, params):
         prefix = self.gethostname(user) if prfx == SRV else prfx.get_irc_mask()
@@ -650,6 +693,7 @@ class IRCUser(object):
         self.irc_username = str(username)
         self.irc_realname = realname
         self.registered = False
+        self.asking_capabilities = False
         self.password = ''
         self.recv_pass = ''
         self.oper = False
@@ -657,6 +701,7 @@ class IRCUser(object):
         self.bot = None
         self.is_service = is_service
         self.close_reason = ''
+        self.extensions = []
 
     def get_irc_mask(self):
         return '{}!{}@{}'.format(self.irc_nick, self.irc_username, self.address)
