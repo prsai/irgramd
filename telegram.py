@@ -24,7 +24,7 @@ from telethon.errors.rpcerrorlist import SessionPasswordNeededError
 from include import CHAN_MAX_LENGTH, NICK_MAX_LENGTH
 from irc import IRCUser
 from utils import sanitize_filename, add_filename, is_url_equiv, extract_url, get_human_size, get_human_duration
-from utils import get_highlighted, fix_braces, format_timestamp, pretty, current_date, token
+from utils import get_highlighted, fix_braces, pretty, current_date, token
 import emoji2emoticon as e
 
 # Test IP table
@@ -57,8 +57,6 @@ class TelegramHandler(object):
         self.test_port  = settings['test_port']
         self.ask_code   = settings['ask_code']
         self.quote_len  = settings['quote_length']
-        self.hist_fmt   = settings['hist_timestamp_format']
-        self.timezone   = settings['timezone']
         self.geo_url    = settings['geo_url']
         self.log_del    = settings['log_deleted']
         if not settings['emoji_ascii']:
@@ -671,8 +669,8 @@ class TelegramHandler(object):
         user = self.get_irc_user_from_telegram(msg.sender_id)
         mid = self.mid.num_to_id_offset(msg.peer_id, msg.id)
         text = await self.render_text(msg, mid, upd_to_webpend, user)
-        text_send = self.set_history_timestamp(text, history, msg.date, msg.action)
-        chan = await self.relay_telegram_message(msg, user, text_send)
+        chan = await self.relay_telegram_message(msg, user, text,
+            timestamp = msg.date if history else None)
         await self.history_search_volatile(history, msg.id)
 
         self.to_cache(msg.id, mid, msg.message, text, user, chan, msg.media)
@@ -705,17 +703,6 @@ class TelegramHandler(object):
         final_text = self.filters(final_text)
         return final_text
 
-    def set_history_timestamp(self, text, history, date, action):
-        if history and self.hist_fmt:
-            timestamp = format_timestamp(self.hist_fmt, self.timezone, date)
-            if action:
-                res = '{} {}'.format(text, timestamp)
-            else:
-                res = '{} {}'.format(timestamp, text)
-        else:
-            res = text
-        return res
-
     async def history_search_volatile(self, history, id):
         if history:
             if id in self.volatile_cache:
@@ -724,28 +711,27 @@ class TelegramHandler(object):
                     text = item['rendered_event']
                     chan = item['channel']
                     date = item['date']
-                    text_send = self.set_history_timestamp(text, history=True, date=date, action=False)
-                    await self.relay_telegram_message(None, user, text_send, chan)
+                    await self.relay_telegram_message(None, user, text_send, chan, timestamp = date if history else None)
 
-    async def relay_telegram_message(self, message, user, text, channel=None):
+    async def relay_telegram_message(self, message, user, text, channel=None, timestamp = None):
         private = (message and message.is_private) or (not message and not channel)
         action = (message and message.action)
         if private:
-            await self.relay_telegram_private_message(user, text, action)
+            await self.relay_telegram_private_message(user, text, action, timestamp=timestamp)
             chan = None
         else:
-            chan = await self.relay_telegram_channel_message(message, user, text, channel, action)
+            chan = await self.relay_telegram_channel_message(message, user, text, channel, action, timestamp=timestamp)
         return chan
 
-    async def relay_telegram_private_message(self, user, message, action=None):
+    async def relay_telegram_private_message(self, user, message, action=None, timestamp=None):
         self.logger.debug('Relaying Telegram Private Message: %s, %s', user, message)
 
         if action:
-            await self.irc.send_action(user, None, message)
+            await self.irc.send_action(user, None, message, timestamp=timestamp)
         else:
-            await self.irc.send_msg(user, None, message)
+            await self.irc.send_msg(user, None, message, timestamp=timestamp)
 
-    async def relay_telegram_channel_message(self, message, user, text, channel, action):
+    async def relay_telegram_channel_message(self, message, user, text, channel, action, timestamp=None):
         if message:
             entity = await message.get_chat()
             chan = await self.get_irc_channel_from_telegram_id(message.chat_id, entity)
@@ -755,9 +741,9 @@ class TelegramHandler(object):
         self.logger.debug('Relaying Telegram Channel Message: %s, %s', chan, text)
 
         if action:
-            await self.irc.send_action(user, chan, text)
+            await self.irc.send_action(user, chan, text, timestamp=timestamp)
         else:
-            await self.irc.send_msg(user, chan, text)
+            await self.irc.send_msg(user, chan, text, timestamp=timestamp)
 
         return chan
 
