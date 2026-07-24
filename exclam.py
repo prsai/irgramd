@@ -6,6 +6,7 @@
 # Use of this source code is governed by a MIT style license that
 # can be found in the LICENSE file included in this project.
 
+import asyncio
 import os
 from telethon.tl.functions.messages import SendReactionRequest
 from telethon import types as tgty
@@ -31,6 +32,7 @@ class exclam(command):
         self.tmp_ircnick = None
         self.tmp_telegram_id = None
         self.tmp_tg_msg = None
+        self.uploads = set()
 
     async def command(self, message, telegram_id, user):
         self.tmp_telegram_id = telegram_id
@@ -156,8 +158,14 @@ class exclam(command):
                     file_path = file
                 else:
                     file_path = os.path.join(self.tg.telegram_upload_dir, file)
-                self.tmp_tg_msg = await self.tg.telegram_client.send_file(self.tmp_telegram_id, file_path, caption=caption, reply_to=re_id)
-                reply = True
+                # run upload on background to avoid blocking
+                task = asyncio.create_task(self.tg.telegram_client.send_file(
+                  self.tmp_telegram_id, file_path,
+                  caption = caption, reply_to = re_id
+                ))
+                self.uploads.add(task)
+                task.add_done_callback(self.uploads.discard)
+                reply = False
             except:
                 cmd = '!reupl' if re_id else '!upl'
                 reply = ('{}: Error uploading'.format(cmd),)
