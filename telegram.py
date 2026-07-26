@@ -13,6 +13,7 @@ import re
 import asyncio
 import collections
 import telethon
+import random
 from getpass import getpass
 from telethon import types as tgty, utils as tgutils
 from telethon.tl.functions.messages import GetMessagesReactionsRequest, GetFullChatRequest
@@ -24,7 +25,7 @@ from telethon.errors.rpcerrorlist import SessionPasswordNeededError
 from include import CHAN_MAX_LENGTH, NICK_MAX_LENGTH
 from irc import IRCUser
 from utils import sanitize_filename, add_filename, is_url_equiv, extract_url, get_human_size, get_human_duration
-from utils import get_highlighted, fix_braces, format_timestamp, pretty, current_date, token
+from utils import get_highlighted, fix_braces, format_timestamp, pretty, current_date, hash_token
 import emoji2emoticon as e
 
 # Test IP table
@@ -64,8 +65,7 @@ class TelegramHandler(object):
         self.log_del    = settings['log_deleted']
         if not settings['emoji_ascii']:
             e.emo = {}
-        self.token = token('+0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz')
-        self.filename_token = self.token.gen_token(5)
+        self.random_token = random.randbytes(5)
         self.irc        = irc
         self.authorized = False
         self.id	= None
@@ -79,6 +79,7 @@ class TelegramHandler(object):
         self.prev_id = {}
         self.sorted_len_usernames = []
         self.last_reaction = None
+        self.tid_to_token = {}
         # Set event to be waited by irc.check_telegram_auth()
         self.auth_checked = asyncio.Event()
 
@@ -410,6 +411,15 @@ class TelegramHandler(object):
             id = peer
             type = ''
         return id, type
+
+    def get_file_token(self, peer):
+        tid, _ = self.get_peer_id_and_type(peer)
+        if tid in self.tid_to_token:
+            token = self.tid_to_token[tid]
+        else:
+            token = hash_token(tid.to_bytes(5, 'big') + self.random_token, 6)
+            self.tid_to_token[tid] = token
+        return token
 
     async def is_bot(self, irc_nick, tid=None):
         user = self.irc.users[irc_nick]
@@ -1066,9 +1076,9 @@ class TelegramHandler(object):
             aux_file = filename
         else:
             if hasattr(message, 'file') and message.file is not None:
-                aux_file = self.filename_token + message.file.ext
+                aux_file = self.get_file_token(message.peer_id) + message.file.ext
             else:
-                aux_file = self.filename_token
+                aux_file = self.get_file_token(message.peer_id)
 
         idd_file = add_filename(aux_file, mid)
         new_file = sanitize_filename(idd_file)
