@@ -54,7 +54,7 @@ executed in a different host).
 - Polls (receive, show)
 - Actions [pin message, channel photo] (receive)
 - Dialogs management
-- History
+- History (with IRCv3 server timestamps when supported by client, or custom if not)
 - Login code and 2FA password support for Telegram
 - Authentication and TLS for IRC
 - Multiple connections from IRC
