@@ -4,6 +4,7 @@
 # Copyright (c) 2019 Peter Bui <pbui@bx612.space>
 # Copyright (c) 2020-2024,2026 E. Bosch <presidev@AT@gmail.com>
 # Copyright (c) 2026 Miro (Mirochill on github.com)
+# Copyright (c) 2026 Lucas de Sena <lucas@seninha.org>
 #
 # Use of this source code is governed by a MIT style license that
 # can be found in the LICENSE file included in this project.
