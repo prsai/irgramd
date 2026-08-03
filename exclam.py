@@ -9,6 +9,7 @@
 import os
 from telethon.tl.functions.messages import SendReactionRequest
 from telethon import types as tgty
+from telethon import utils as tgutils
 from telethon.errors.rpcerrorlist import MessageNotModifiedError, MessageAuthorRequiredError, ReactionInvalidError
 
 from utils import command, HELP
@@ -21,6 +22,8 @@ class exclam(command):
             '!del':       (self.handle_command_del,                   1,  1, -1),
             '!ed':        (self.handle_command_ed,                    2,  2,  2),
             '!fwd':       (self.handle_command_fwd,                   2,  2, -1),
+            '!get':       (self.handle_command_get,                   1,  1, -1),
+            '!history':   (self.handle_command_history,               0,  2, -1),
             '!re':        (self.handle_command_re,                    2,  2,  2),
             '!react':     (self.handle_command_react,                 2,  2, -1),
             '!reupl':     (self.handle_command_reupl,                 2,  3,  3),
@@ -220,5 +223,90 @@ class exclam(command):
               'React with <emoticon reaction> to a message with <compact_id>,',
               'irgramd will translate emoticon to closest emoji.',
               'Use - to remove a previous reaction.',
+            )
+        return reply
+
+    async def handle_command_get(self, mid=None, help=None):
+        if not help:
+            msg = None
+            # If the ID starts with '=' is absolute ID, not compact ID
+            # character '=' is not used by compact IDs
+            if mid[0] == '=':
+                id = int(mid[1:])
+            else:
+                id = self.tg.mid.id_to_num_offset(self.tmp_telegram_id, mid)
+            if id is not None:
+                msg = await self.tg.telegram_client.get_messages(entity=self.tmp_telegram_id, ids=id)
+            if msg is not None:
+                await self.tg.handle_telegram_message(event=None, message=msg, history=True)
+                reply = None
+            else:
+                reply = ('Message not found',)
+        else: # HELP.brief or HELP.desc (first line)
+            reply = ('   !get        Get a message by id',)
+        if help == HELP.desc:  # rest of HELP.desc
+            reply += \
+            (
+              '   !get <compact_id|=absolute_id>',
+              'Get one message from current channel/chat with the compact',
+              'ID or if prefixed with = the absolute numeric ID (the last',
+              'mainly for debugging)',
+            )
+        return reply
+
+    async def handle_command_history(self, limit='10', add_unread=None, help=None):
+        if not help:
+            async def get_unread(tgt_id):
+                async for dialog in self.tg.telegram_client.iter_dialogs():
+                    id, type = tgutils.resolve_id(dialog.id)
+                    if id == tgt_id:
+                        count = dialog.unread_count
+                        reply = None
+                        break
+                else:
+                    count = None
+                    reply = ('Unknown unread',)
+                return count, reply
+
+            def conv_int(num_str):
+                if num_str.isdigit():
+                    n = int(num_str)
+                    err = None
+                else:
+                    n = None
+                    err = ('Invalid argument',)
+                return n, err
+
+            if limit == 'unread':
+                add_unread = '0' if add_unread is None else add_unread
+                add_unread_int, reply = conv_int(add_unread)
+                if reply: return reply
+
+                li, reply = await get_unread(self.tmp_telegram_id)
+                if reply: return reply
+                li += add_unread_int
+            elif add_unread is not None:
+                reply = ('Wrong number of arguments',)
+                return reply
+            elif limit == 'all':
+                li = reply = None
+            else:
+                li, reply = conv_int(limit)
+                if reply: return reply
+
+            his = await self.tg.telegram_client.get_messages(self.tmp_telegram_id, limit=li)
+            for msg in reversed(his):
+                await self.tg.handle_telegram_message(event=None, message=msg, history=True)
+        else: # HELP.brief or HELP.desc (first line)
+            reply = ('   !history    Get messages from history',)
+        if help == HELP.desc:  # rest of HELP.desc
+            reply += \
+            (
+              '   !history [<limit>|all|unread [<plusN>]]',
+              'Get last <limit> number of messages already sent on current',
+              'channel/chat. If not set <limit> is 10.',
+              'Instead of <limit>, "unread" is for messages not marked as read,',
+              'optionally <plusN> number of previous messages to the first unread.',
+              'Instead of <limit>, "all" is for retrieving all available messages',
             )
         return reply
