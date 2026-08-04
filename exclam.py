@@ -28,6 +28,7 @@ class exclam(command):
             '!react':     (self.handle_command_react,                 2,  2, -1),
             '!reupl':     (self.handle_command_reupl,                 2,  3,  3),
             '!upl':       (self.handle_command_upl,                   1,  2,  2),
+            '!!':         (self.handle_command_double_exclam,         0,  0,  0), # not a real command, only to handle help
         }
         self.tg = telegram
         self.irc = telegram.irc
@@ -308,5 +309,19 @@ class exclam(command):
               'Instead of <limit>, "unread" is for messages not marked as read,',
               'optionally <plusN> number of previous messages to the first unread.',
               'Instead of <limit>, "all" is for retrieving all available messages',
+            )
+        return reply
+
+    async def handle_command_double_exclam(self, help):
+        # Only called as help, never as command
+        # HELP.brief or HELP.desc (first line)
+        reply = ('   !!          Send a single ! to the channel/chat',)
+        if help == HELP.desc:  # rest of HELP.desc
+            reply += \
+            (
+              '   !!<other text>',
+              'Send a single ! at the beginning of the line to the channel/chat,',
+              'not being interpreted as a command, the rest of the text is sent',
+              'as well without modification.',
             )
         return reply
