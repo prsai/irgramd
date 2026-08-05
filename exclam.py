@@ -85,7 +85,7 @@ class exclam(command):
                 else:
                     reply = True
             else:
-                reply = ('Unknown message to edit',)
+                reply = ('!ed: Unknown message to edit',)
         else: # HELP.brief or HELP.desc (first line)
             reply = ('   !ed         Edit a message',)
         if help == HELP.desc:  # rest of HELP.desc
@@ -108,7 +108,7 @@ class exclam(command):
                     self.tmp_tg_msg = None
                     reply = None
             else:
-                reply = ('Unknown message to delete',)
+                reply = ('!del: Unknown message to delete',)
         else: # HELP.brief or HELP.desc (first line)
             reply = ('   !del        Delete a message',)
         if help == HELP.desc:  # rest of HELP.desc
@@ -242,7 +242,7 @@ class exclam(command):
                 await self.tg.handle_telegram_message(event=None, message=msg, history=True)
                 reply = None
             else:
-                reply = ('Message not found',)
+                reply = ('!get: Message not found',)
         else: # HELP.brief or HELP.desc (first line)
             reply = ('   !get        Get a message by id',)
         if help == HELP.desc:  # rest of HELP.desc
@@ -266,7 +266,7 @@ class exclam(command):
                         break
                 else:
                     count = None
-                    reply = ('Unknown unread',)
+                    reply = ('!history: Unknown unread',)
                 return count, reply
 
             def conv_int(num_str):
@@ -275,7 +275,7 @@ class exclam(command):
                     err = None
                 else:
                     n = None
-                    err = ('Invalid argument',)
+                    err = ('!history: Invalid argument',)
                 return n, err
 
             if limit == 'unread':
@@ -287,7 +287,7 @@ class exclam(command):
                 if reply: return reply
                 li += add_unread_int
             elif add_unread is not None:
-                reply = ('Wrong number of arguments',)
+                reply = ('!history: Wrong number of arguments',)
                 return reply
             elif limit == 'all':
                 li = reply = None
