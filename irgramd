@@ -83,6 +83,8 @@ if __name__ == '__main__':
     tornado.options.define('cache_dir', default='~/.cache/irgramd', metavar='PATH', help='Cache directory where telegram media is saved by default')
     tornado.options.define('char_in_encoding', default='utf-8', metavar='ENCODING', help='Character input encoding for IRC')
     tornado.options.define('char_out_encoding', default='utf-8', metavar='ENCODING', help='Character output encoding for IRC')
+    tornado.options.define('chars_highlight', default='~~', metavar='TWO_CHARS_START_AND_END', help='Characters to highlight (to surround, start and end) a nick mentioned (starting with @) when receiving messages from Telegram, e.g. with default "~~" will be "@highlighted" converted to "~highlighted~". If it\'s a space will be empty.')
+    tornado.options.define('chars_mention', default=' :', metavar='TWO_CHARS_START_AND_END', help='Characters to convert (to surround, start and end) to a mention (starting with @) whend sending messages from IRC, e.g. with default " :" will be "mention:" converted to "@mention". If it\'s a space will be empty.')
     tornado.options.define('config', default='irgramdrc', metavar='CONFIGFILE', help='Config file absolute or relative to `config_dir` (command line options override it)')
     tornado.options.define('config_dir', default='~/.config/irgramd', metavar='PATH', help='Configuration directory where telegram session info is saved')
     tornado.options.define('download_media', default=True, help='Enable download of any media (photos, documents, etc.), if not set only a message of media will be shown')

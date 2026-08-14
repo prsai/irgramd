@@ -62,6 +62,8 @@ class TelegramHandler(object):
         self.show_react = settings['show_reactions']
         self.geo_url    = settings['geo_url']
         self.log_del    = settings['log_deleted']
+        self.high       = settings['chars_highlight']
+        self.mention    = settings['chars_mention']
         if not settings['emoji_ascii']:
             e.emo = {}
         self.random_token = random.randbytes(5)
@@ -76,9 +78,10 @@ class TelegramHandler(object):
         self.cache = collections.OrderedDict()
         self.volatile_cache = collections.OrderedDict()
         self.prev_id = {}
-        self.sorted_len_usernames = []
+        self.lookup_usernames = set()
         self.last_reaction = None
         self.tid_to_token = {}
+        self.rargs = {}
         # Set event to be waited by irc.check_telegram_auth()
         self.auth_checked = asyncio.Event()
 
@@ -175,7 +178,6 @@ class TelegramHandler(object):
         tg_user = await self.telegram_client.get_me()
         self.id = tg_user.id
         self.tg_username = self.get_telegram_nick(tg_user)
-        self.add_sorted_len_usernames(self.tg_username)
         self.set_ircuser_from_telegram(tg_user)
         async for dialog in self.telegram_client.iter_dialogs():
             chat = dialog.entity
@@ -191,7 +193,8 @@ class TelegramHandler(object):
             if not user.is_self:
                 irc_user = IRCUser(None, ('Telegram',''), tg_nick, user.id, self.get_telegram_display_name(user))
                 self.irc.users[tg_ni] = irc_user
-                self.add_sorted_len_usernames(tg_ni)
+                self.lookup_usernames.add(tg_ni)
+                self.lookup_usernames.add(tg_nick)
             self.tid_to_iid[user.id] = tg_nick
             self.irc.iid_to_tid[tg_ni] = user.id
         else:
@@ -495,53 +498,64 @@ class TelegramHandler(object):
             cache.popitem(last=False)
 
     def replace_mentions(self, text, me_nick='', received=True):
-        # For received replace @mention to ~mention~
+        # For received, e.g. with defaults, replace @mention to ~mention~
         # For sent replace mention: to @mention
-        rargs = {}
-        def repl_mentioned(text, me_nick, received, mark, repl_pref, repl_suff):
+        def repl_mentioned(text, me_nick, received, local_high_ini, local_high_end, local_ment_ini, local_ment_end, tg_at):
             new_text = text
 
-            for user in self.sorted_len_usernames:
+            if me_nick:
+                usernames = (self.tg_username,)
+            else:
+                usernames = self.lookup_usernames
+
+            for user in usernames:
                 if user == self.tg_username:
                     if me_nick:
                         username = me_nick
                     else:
                         continue
                 else:
-                    username = self.irc.users[user].irc_nick
+                    username = user
+
+                if user not in new_text:
+                    continue
 
                 if received:
-                    mention = mark + user
-                    mention_case = mark + username
+                    mention = tg_at + user
+                    replcmnt = local_high_ini + username + local_high_end
                 else: # sent
-                    mention = user + mark
-                    mention_case = username + mark
-                replcmnt = repl_pref + username + repl_suff
+                    mention = local_ment_ini + user + local_ment_end
+                    replcmnt = tg_at + username
 
-                # Start of the text
-                for ment in (mention, mention_case):
-                    if new_text.startswith(ment):
-                        new_text = new_text.replace(ment, replcmnt, 1)
-
-                # Next words (with space as separator)
-                mention = ' ' + mention
-                mention_case = ' ' + mention_case
-                replcmnt = ' ' + replcmnt
-                new_text = new_text.replace(mention, replcmnt).replace(mention_case, replcmnt)
-
+                new_text = re.sub(r'(?:(?<=^)|(?<= ))' + re.escape(mention) + r'(?=$| )', replcmnt.replace('\\', r'\\'), new_text)
             return new_text
 
-        if received:
-            mark = '@'
-            rargs['repl_pref'] = '~'
-            rargs['repl_suff'] = '~'
-        else: # sent
-            mark = ':'
-            rargs['repl_pref'] = '@'
-            rargs['repl_suff'] = ''
+        def space_to_empty(string, index):
+            if len(string) > index:
+                return '' if string[index] == ' ' else string[index]
+            else:
+                return ''
 
-        if text.find(mark) != -1:
-            text_replaced = repl_mentioned(text, me_nick, received, mark, **rargs)
+        if self.rargs == {}:
+            self.rargs['local_high_ini'] = space_to_empty(self.high, 0)
+            self.rargs['local_high_end'] = space_to_empty(self.high, 1)
+            self.rargs['local_ment_ini'] = space_to_empty(self.mention, 0)
+            self.rargs['local_ment_end'] = space_to_empty(self.mention, 1)
+            self.rargs['tg_at'] = '@'
+            self.marks = self.rargs['local_ment_ini'] + self.rargs['local_ment_end']
+
+        if received:
+            replace = True if self.rargs['tg_at'] in text else False
+        else: # sent
+            for mark in self.marks:
+                if mark in text:
+                    replace = True
+                    break
+            else:
+                replace = False
+
+        if replace:
+            text_replaced = repl_mentioned(text, me_nick, received, **self.rargs)
         else:
             text_replaced = text
         return text_replaced
@@ -550,10 +564,6 @@ class TelegramHandler(object):
         filtered = e.replace_mult(text, e.emo)
         filtered = self.replace_mentions(filtered)
         return filtered
-
-    def add_sorted_len_usernames(self, username):
-        self.sorted_len_usernames.append(username)
-        self.sorted_len_usernames.sort(key=lambda k: len(k), reverse=True)
 
     def format_reaction(self, msg, message_rendered, edition_case, reaction):
         react_quote_len = self.quote_len * 2
