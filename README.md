@@ -16,6 +16,14 @@ currently is a project on its own**
 **irgramd is under active development, though usable, several
 planned features are not implemented yet**
 
+<br>
+<p align="center">
+<a href="https://src.presi.org/static/screenshots/screenshot-irgramd.png">
+<img src="https://src.presi.org/static/screenshots/screenshot-irgramd-50.png">
+</a>
+</p>
+<br>
+
 ## How it works
 
 Configure your IRC client to connect to irgramd (running on the same host or
