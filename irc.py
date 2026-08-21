@@ -445,6 +445,8 @@ class IRCHandler(object):
             tgt = tgl
 
         if tgt in self.iid_to_tid:
+            if await self.block_ctcp(message, user):
+                return
             message = self.tg.replace_mentions(message, me_nick='', received=False)
             telegram_id = self.iid_to_tid[tgt]
             if double_exclam := (message[:2] == '!!'):
@@ -711,6 +713,14 @@ class IRCHandler(object):
 
     def gethostname(self, user):
         return 'localhost' if user.from_localhost else self.hostname
+
+    async def block_ctcp(self, msg, user):
+        if msg[0] == '\x01':
+            await self.send_msg(self.service_user, None, 'CTCP not available', user)
+            res = True
+        else:
+            res = False
+        return res
 
 class IRCUser(object):
     def __init__(self, stream, address, irc_nick=None, username='', realname=None, is_service=False):
