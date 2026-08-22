@@ -49,6 +49,7 @@ class TelegramHandler(object):
         self.media_url  = settings['media_url']
         if self.media_url[-1:] != '/':
             self.media_url += '/'
+        self.media_subs = settings['media_subdirs']
         self.upload_dir = settings['upload_dir']
         self.api_id     = settings['api_id']
         self.api_hash   = settings['api_hash']
@@ -422,6 +423,22 @@ class TelegramHandler(object):
             token = hash_token(tid.to_bytes(5, 'big') + self.random_token, 6)
             self.tid_to_token[tid] = token
         return token
+
+    async def get_media_subdir(self, peer, token):
+        if token:
+            file_token = token
+        else:
+            file_token = self.get_file_token(peer)
+        sep = '-'
+        id, type = self.get_peer_id_and_type(peer)
+        if type == 'chan':
+            subdir = (await self.get_irc_channel_from_telegram_id(id))[1:]
+        elif type == 'user':
+            subdir = await self.get_irc_nick_from_telegram_id(id)
+        else:
+            subdir = ''
+            sep = ''
+        return '{}{}{}'.format(sanitize_filename(subdir), sep, file_token)
 
     async def is_bot(self, irc_nick, tid=None):
         user = self.irc.users[irc_nick]
@@ -1071,15 +1088,22 @@ class TelegramHandler(object):
             return ''
         if filename:
             aux_file = filename
+            file_token = ''
         else:
+            file_token = self.get_file_token(message.peer_id)
             if hasattr(message, 'file') and message.file is not None:
-                aux_file = self.get_file_token(message.peer_id) + message.file.ext
+                aux_file = file_token + message.file.ext
             else:
-                aux_file = self.get_file_token(message.peer_id)
+                aux_file = file_token
 
         idd_file = add_filename(aux_file, mid)
         new_file = sanitize_filename(idd_file)
-        new_path = os.path.join(self.telegram_media_dir, new_file)
+        if self.media_subs:
+            media_subdir = await self.get_media_subdir(message.peer_id, file_token)
+            media_subdir_url = media_subdir + '/'
+        else:
+            media_subdir = media_subdir_url = ''
+        new_path = os.path.join(self.telegram_media_dir, media_subdir, new_file)
         if os.path.exists(new_path) and (size == 0 or size == os.path.getsize(new_path)):
             local_path = new_path
         else:
@@ -1089,7 +1113,7 @@ class TelegramHandler(object):
 
         if local_path != new_path:
             os.replace(local_path, new_path)
-        return self.media_url + new_file
+        return self.media_url + media_subdir_url + new_file
 
     async def notice_downloading(self, size, relay_attr):
         if relay_attr and size > self.notice_size:

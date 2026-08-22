@@ -101,6 +101,7 @@ if __name__ == '__main__':
     tornado.options.define('log_file', default=None, metavar='PATH', help='File where logs are appended, if not set will be stderr')
     tornado.options.define('log_level', default='INFO', metavar='DEBUG|INFO|WARNING|ERROR|CRITICAL|NONE', help='The log level (and any higher to it) that will be logged')
     tornado.options.define('media_dir', default=None, metavar='PATH', help='Directory where Telegram media files are downloaded, default "media" in `cache_dir`')
+    tornado.options.define('media_subdirs', default=False, help='If enable, for downloads, a subdirectory with the name of the channel or user will be created')
     tornado.options.define('media_url', default=None, metavar='BASE_URL', help='Base URL for media files, should be configured in the external (to irgramd) webserver')
     tornado.options.define('pam', default=False, help='Use PAM for IRC authentication, if not set you should set `irc_password`')
     tornado.options.define('pam_group', default=None, metavar='GROUP', help='Unix group allowed if `pam` enabled, if empty any user is allowed')
