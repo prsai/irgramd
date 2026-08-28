@@ -491,14 +491,14 @@ class IRCHandler(object):
         is_chan = tgt in self.irc_channels.keys()
         # source None (False): it's self Telegram user, see [1]
         source_mask = source.get_irc_mask() if source else ''
-        for msg in messages:
-            if selfuser:
-                irc_users = (selfuser,)
-            elif is_chan:
-                irc_users = (u for u in self.users.values() if u.stream and u.irc_nick in self.irc_channels[tgt])
-            else:
-                irc_users = (u for u in self.users.values() if u.stream)
+        if selfuser:
+            irc_users = (selfuser,)
+        elif is_chan:
+            irc_users = tuple(u for u in self.users.values() if u.stream and u.irc_nick in self.irc_channels[tgt])
+        else:
+            irc_users = tuple(u for u in self.users.values() if u.stream)
 
+        for msg in messages:
             for irc_user in irc_users:
                 await self.send_privmsg(irc_user, source_mask, target, msg, timestamp=timestamp)
 
