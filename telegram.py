@@ -1154,7 +1154,8 @@ class mesg_id:
     def id_to_num_offset(self, peer, mid):
         peer_id = self.get_peer_id(peer)
         if peer_id in self.mesg_base:
-            if self.is_in(mid, self.alpha):
+            mid_check = mid[1:] if mid[0] == '-' else mid
+            if self.is_in(mid_check, self.alpha):
                 id_rel = self.id_to_num(mid)
                 id = id_rel + self.mesg_base[peer_id]
             else:
