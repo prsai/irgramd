@@ -17,6 +17,7 @@ import string
 import time
 
 import tornado.ioloop
+from asyncio import create_task as asyncio_create_task
 
 # Local modules
 
@@ -65,6 +66,7 @@ class IRCHandler(object):
         self.hostname   = socket.getfqdn()
         self.conf = settings
         self.users      = {}
+        self.handler_tasks = set()
 
         # Initialize IRC
         self.initialize_irc()
@@ -102,7 +104,9 @@ class IRCHandler(object):
                         num_params_expected = len(params.keys())
                         if num_params >= self.num_params_necessary(num_params_required,
                                                                    num_params_expected):
-                            await handler(user, **params)
+                            handler_task = asyncio_create_task(handler(user, **params))
+                            self.handler_tasks.add(handler_task)
+                            handler_task.add_done_callback(self.handler_tasks.discard)
                         else:
                             await self.reply_code(user, 'ERR_NEEDMOREPARAMS')
                     else:
