@@ -270,30 +270,40 @@ class exclam(command):
                     reply = ('!history: Unknown unread',)
                 return count, reply
 
-            def conv_int(num_str):
-                if num_str.isdigit():
-                    n = int(num_str)
+            def conv_int(num_str, neg):
+                def intn(str, neg):
+                    i = int(str)
+                    if not neg and i < 0:
+                        raise ValueError
+                    return i
+                try:
+                    n = intn(num_str, neg)
                     err = None
-                else:
+                except:
                     n = None
                     err = ('!history: Invalid argument',)
                 return n, err
 
             if limit == 'unread':
                 add_unread = '0' if add_unread is None else add_unread
-                add_unread_int, reply = conv_int(add_unread)
+                add_unread_int, reply = conv_int(add_unread, neg=True)
                 if reply: return reply
 
                 li, reply = await get_unread(self.tmp_telegram_id)
                 if reply: return reply
-                li += add_unread_int
+
+                sub_unread_int = -add_unread_int
+                if add_unread_int < 0 and li > sub_unread_int:
+                    li = sub_unread_int
+                elif add_unread_int > 0:
+                    li += add_unread_int
             elif add_unread is not None:
                 reply = ('!history: Wrong number of arguments',)
                 return reply
             elif limit == 'all':
                 li = reply = None
             else:
-                li, reply = conv_int(limit)
+                li, reply = conv_int(limit, neg=False)
                 if reply: return reply
 
             his = await self.tg.telegram_client.get_messages(self.tmp_telegram_id, limit=li)
@@ -304,12 +314,15 @@ class exclam(command):
         if help == HELP.desc:  # rest of HELP.desc
             reply += \
             (
-              '   !history [<limit>|all|unread [<plusN>]]',
+              '   !history [<limit>|all|unread [[+]<plusN>|-<minusN>]]',
               'Get last <limit> number of messages already sent on current',
               'channel/chat. If not set <limit> is 10.',
+              'Instead of <limit>, "all" is for retrieving all available messages.',
               'Instead of <limit>, "unread" is for messages not marked as read,',
-              'optionally <plusN> number of previous messages to the first unread.',
-              'Instead of <limit>, "all" is for retrieving all available messages',
+              'optionally <plusN> number of previous messages to the first unread,',
+              'or only the last <minusN> unread messages,',
+              'e.g. !history unread -40 (get 40 unread messages or less if there are less)',
+              '     !history unread +40 (get all unread messages plus the last 40 read ones).',
             )
         return reply
 
