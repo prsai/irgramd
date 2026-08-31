@@ -107,6 +107,7 @@ class IRCHandler(object):
                             handler_task = asyncio_create_task(handler(user, **params))
                             self.handler_tasks.add(handler_task)
                             handler_task.add_done_callback(self.handler_tasks.discard)
+                            del handler_task
                         else:
                             await self.reply_code(user, 'ERR_NEEDMOREPARAMS')
                     else:
