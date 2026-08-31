@@ -104,10 +104,7 @@ class IRCHandler(object):
                         num_params_expected = len(params.keys())
                         if num_params >= self.num_params_necessary(num_params_required,
                                                                    num_params_expected):
-                            handler_task = asyncio_create_task(handler(user, **params))
-                            self.handler_tasks.add(handler_task)
-                            handler_task.add_done_callback(self.handler_tasks.discard)
-                            del handler_task
+                            await self.execute_handler(handler(user, **params))
                         else:
                             await self.reply_code(user, 'ERR_NEEDMOREPARAMS')
                     else:
@@ -116,6 +113,15 @@ class IRCHandler(object):
 
             if not matches and user.registered:
                 await self.reply_code(user, 'ERR_UNKNOWNCOMMAND')
+
+    async def execute_handler(self, handler):
+        # QUIT handler must be awaited to avoid a race condition
+        if handler.__name__ == 'handle_irc_quit':
+            await handler
+        else:
+            handler_task = asyncio_create_task(handler)
+            self.handler_tasks.add(handler_task)
+            handler_task.add_done_callback(self.handler_tasks.discard)
 
     def set_telegram(self, tg):
         self.tg = tg
@@ -472,7 +478,7 @@ class IRCHandler(object):
             await self.reply_code(user, 'ERR_NOSUCHNICK', (target,))
 
     async def handle_irc_quit(self, user, reason):
-        self.logger.debug('Handling TOPIC: %s', reason)
+        self.logger.debug('Handling QUIT: %s', reason)
 
         await self.reply_command(user, SRV, 'ERROR', (':Client disconnect',))
         user.close_reason = ':' + reason
