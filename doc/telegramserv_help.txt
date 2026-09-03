@@ -1,0 +1,105 @@
+TelegramServ - Summary of commands:
+-----------------------------------
+
+This service contains specific Telegram commands that irgramd
+cannot map to IRC commands. The following commands are available:
+   code        Enter authorization code and 2FA password
+   dialog      Manage conversations (dialogs)
+   help        This help
+   mark_read   Mark messages as read
+The commands begining with ! (exclamation) must be used directly
+in channels or chats. The following ! commands are available:
+   !del        Delete a message
+   !ed         Edit a message
+   !fwd        Forward a message
+   !get        Get a message by id
+   !history    Get messages from history
+   !re         Reply to a message
+   !react      React to a message
+   !reupl      Reply to a message with an upload
+   !upl        Upload a file to current channel/chat
+   !!          Send a single ! to the channel/chat
+If you need more information about a specific command you can use
+help <command>
+
+TelegramServ - Detail of commands:
+----------------------------------
+
+   code        Enter authorization code and 2FA password
+   code <code> [<password>]
+Enter authorization code sent by Telegram to the phone or to
+another client connected. If 2nd factor authentication (2FA) password
+is enabled in your account, must be provided too.
+This authentication usually is only needed the first time
+that irgramd connects to Telegram with a given account.
+
+   dialog      Manage conversations (dialogs)
+   dialog <subcommand> [id]
+Manage conversations (dialogs) established in Telegram, the
+following subcommands are available:
+   list           Show all dialogs
+
+   mark_read   Mark messages as read
+   mark_read <peer>
+Mark all messages on <peer> (channel or user) as read, this also will
+reset the number of mentions to you on <peer>.
+
+   !del        Delete a message
+   !del <compact_id>
+Delete a message with <compact_id> on current channel/chat
+
+   !ed         Edit a message
+   !ed <compact_id> <new_message>
+Edit a message with <compact_id> on current channel/chat,
+<new_message> replaces the current message.
+
+   !fwd        Forward a message
+   !fwd <compact_id> <chat>
+Forward a message with <compact_id> to <chat> channel/chat.
+
+   !get        Get a message by id
+   !get <compact_id|=absolute_id>
+Get one message from current channel/chat with the compact
+ID or if prefixed with = the absolute numeric ID (the last
+mainly for debugging)
+
+   !history    Get messages from history
+   !history [<limit>|all|unread [[+]<plusN>|-<minusN>]]
+Get last <limit> number of messages already sent on current
+channel/chat. If not set <limit> is 10.
+Instead of <limit>, "all" is for retrieving all available messages.
+Instead of <limit>, "unread" is for messages not marked as read,
+optionally <plusN> number of previous messages to the first unread,
+or only the last <minusN> unread messages,
+e.g. !history unread -40 (get 40 unread messages or less if there are less)
+     !history unread +40 (get all unread messages plus the last 40 read ones).
+
+   !re         Reply to a message
+   !re <compact_id> <message>
+Reply with <message> to a message with <compact_id> on current
+channel/chat.
+
+   !react      React to a message
+   !react <compact_id> <emoticon reaction>|-
+React with <emoticon reaction> to a message with <compact_id>,
+irgramd will translate emoticon to closest emoji.
+Use - to remove a previous reaction.
+
+   !reupl      Reply to a message with an upload
+   !reupl <compact_id> <file name/URL> [<optional caption>]
+Reply with the upload of <file name/URL> to a message with
+<compact_id> on current channel/chat. The file must be
+present in "upload" irgramd local directory or be an external
+HTTP/HTTPS URL.
+
+   !upl        Upload a file to current channel/chat
+   !upl <file name/URL> [<optional caption>]
+Upload the file referenced by <file name/URL> to current
+channel/chat, the file must be present in "upload"
+irgramd local directory or be an external HTTP/HTTPS URL.
+
+   !!          Send a single ! to the channel/chat
+   !!<other text>
+Send a single ! at the beginning of the line to the channel/chat,
+not being interpreted as a command, the rest of the text is sent
+as well without modification.

@@ -88,9 +88,9 @@ executed in a different host).
 
 ## Configuration
 
-From irgramd directory `./irgramd --help` will show all configuration
-options available, these options can be used directy in the command line or
-in a file.
+From irgramd directory `./irgramd --help` will show all [configuration
+options](doc/irgramd_help.txt) available, these options can be used directy
+in the command line or in a file.
 
 When used in command line the separator is `-` (dash) with two leading
 dashes, example: `--api-hash`.
@@ -116,6 +116,9 @@ From irgramd directory, in foreground:
 In background (with logs):
 
     ./irgramd --log-file=irgramd.log &
+
+Once connected to IRC, there is a special service user (TelegramServ) that
+accepts [commands](doc/telegramserv_help.txt) to do actions related with Telegram.
 
 ## Notes
 

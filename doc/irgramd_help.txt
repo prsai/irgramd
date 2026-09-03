@@ -1,0 +1,125 @@
+Usage: ./irgramd [OPTIONS]
+
+Options:
+
+  --                               Stop parsing options
+  --help                           show this help information
+
+/home/tg/irgramd_/irgramd options:
+
+  --api-hash=HASH                  Telegram API Hash for your account (obtained
+                                   from https://my.telegram.org/apps)
+  --api-id=ID                      Telegram API ID for your account (obtained
+                                   from https://my.telegram.org/apps)
+  --ask-code                       Ask authentication code (sent by Telegram)
+                                   and 2FA password (if enabled) in console
+                                   instead of "code" service command in IRC
+                                   (default False)
+  --cache-dir=PATH                 Cache directory where telegram media is
+                                   saved by default (default ~/.cache/irgramd)
+  --char-in-encoding=ENCODING      Character input encoding for IRC (default
+                                   utf-8)
+  --char-out-encoding=ENCODING     Character output encoding for IRC (default
+                                   utf-8)
+  --chars-highlight=TWO_CHARS_START_AND_END 
+                                   Characters to highlight (to surround, start
+                                   and end) a nick mentioned (starting with @)
+                                   when receiving messages from Telegram, e.g.
+                                   with default "~~" will be "@highlighted"
+                                   converted to "~highlighted~". If it's a
+                                   space will be empty. (default ~~)
+  --chars-mention=TWO_CHARS_START_AND_END 
+                                   Characters to convert (to surround, start
+                                   and end) to a mention (starting with @)
+                                   whend sending messages from IRC, e.g. with
+                                   default " :" will be "mention:" converted to
+                                   "@mention". If it's a space will be empty.
+                                   (default  :)
+  --config=CONFIGFILE              Config file absolute or relative to
+                                   `config_dir` (command line options override
+                                   it) (default irgramdrc)
+  --config-dir=PATH                Configuration directory where telegram
+                                   session info is saved (default
+                                   ~/.config/irgramd)
+  --download-media                 Enable download of any media (photos,
+                                   documents, etc.), if not set only a message
+                                   of media will be shown (default True)
+  --download-notice=SIZE (MiB)     Enable a notice when a download starts if
+                                   its size is greater than SIZE, this is
+                                   useful when a download takes some time to be
+                                   completed (default 10)
+  --emoji-ascii                    Replace emoji with ASCII emoticons (default
+                                   False)
+  --geo-url=TEMPLATE_URL           Use custom URL for showing geo
+                                   latitude/longitude location, eg.
+                                   OpenStreetMap
+  --hist-timestamp-format=DATETIME_FORMAT 
+                                   Format string for timestamps in history, if
+                                   the client does not support server-time
+                                   capability, see https://www.strfti.me
+                                   (default [%F %T])
+  --initial-help                   Enable/disable initial help message from
+                                   service user [TelegramServ] (default True)
+  --irc-address=ADDRESS            Address to listen on for IRC (default
+                                   127.0.0.1)
+  --irc-nicks=nick,..              List of nicks allowed for IRC, if `pam` and
+                                   optionally `pam_group` are set, PAM
+                                   authentication will be used instead (default
+                                   [])
+  --irc-password=PASSWORD          Password for IRC authentication, if `pam` is
+                                   set, PAM authentication will be used instead
+  --irc-port=PORT                  Port to listen on for IRC. (default 6667,
+                                   default with TLS 6697)
+  --log-deleted                    Deleted messages not in cache are logged, if
+                                   disabled service user [TelegramServ] will
+                                   notify them (default False)
+  --log-file=PATH                  File where logs are appended, if not set
+                                   will be stderr
+  --log-level=DEBUG|INFO|WARNING|ERROR|CRITICAL|NONE 
+                                   The log level (and any higher to it) that
+                                   will be logged (default INFO)
+  --media-dir=PATH                 Directory where Telegram media files are
+                                   downloaded, default "media" in `cache_dir`
+  --media-subdirs                  If enable, for downloads, a subdirectory
+                                   with the name of the channel or user will be
+                                   created (default False)
+  --media-url=BASE_URL             Base URL for media files, should be
+                                   configured in the external (to irgramd)
+                                   webserver
+  --pam                            Use PAM for IRC authentication, if not set
+                                   you should set `irc_password` (default
+                                   False)
+  --pam-group=GROUP                Unix group allowed if `pam` enabled, if
+                                   empty any user is allowed
+  --phone=PHONE_NUMBER             Phone number associated with the Telegram
+                                   account to receive the authorization codes
+                                   if necessary
+  --quote-length=LENGTH            Max length of the text quoted in replies and
+                                   reactions, if longer is truncated (default
+                                   50)
+  --service-user=SERVICE_NICK      Nick of the service/control user, must be a
+                                   nick not used by a real Telegram user
+                                   (default TelegramServ)
+  --show-reactions                 Show reactions to messages (default True)
+  --test                           Connect to Telegram test environment
+                                   (default False)
+  --test-datacenter=DATACENTER_NUMBER 
+                                   Datacenter to connect to Telegram test
+                                   environment (default 2)
+  --test-host=HOST_IP              Host to connect to Telegram test environment
+                                   (default: use a internal table depending on
+                                   datacenter)
+  --test-port=PORT                 Port to connect to Telegram test environment
+                                   (default 443)
+  --timezone=TIMEZONE              Timezone to use for dates (timestamps in
+                                   history, last in dialogs, etc.) (default
+                                   UTC)
+  --tls                            Use TLS/SSL encrypted connection for IRC
+                                   server (default False)
+  --tls-cert=CERTFILE              IRC server certificate chain for TLS/SSL,
+                                   also can contain private key if not defined
+                                   with `tls_key`
+  --tls-key=KEYFILE                IRC server private key for TLS/SSL
+  --upload-dir=PATH                Directory where files to upload are picked
+                                   up, default "upload" in `cache_dir`
+
