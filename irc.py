@@ -176,7 +176,8 @@ class IRCHandler(object):
     async def handle_irc_cap_end(self, user, **args):
         self.logger.debug('Handling CAP END')
         user.asking_capabilities = False
-        await self.register(user)
+        if not user.registered and user.irc_nick and user.irc_username:
+            await self.register(user)
 
     async def handle_irc_cap_ls(self, user, **args):
         self.logger.debug('Handling CAP LS')
