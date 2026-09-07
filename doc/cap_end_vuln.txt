@@ -1,0 +1,19 @@
+IRC user registration ignoring PASS in CAP END
+
+Description:
+During IRC user registration process, if capability negotiation is in course
+and ends (with CAP END command), the user is registered without taking into
+account that password is not given (if required via PASS command).
+
+Impact:
+If irgramd is listening outside localhost, remote authentication without
+user/password is possible, assigning nick "None". In this state not all
+commands or chats will work.
+
+Introduced in patch:
+darcs 13f03892c01a9b81ddda9b8151c6d260b9afaa73
+git 114375ea1e54c225bef888b78e220f9369c08bc9
+
+Fixed in patch:
+darcs 4cb1efb7ccbc1184c8a82fb1f1016a9f54c18b16
+git be9390ccb1dd568ff8f4dc275cd80095cd245ed1

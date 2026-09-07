@@ -7,14 +7,16 @@ irgramd is written in [python] (version 3), it acts as an IRC server
 where an IRC client can connect and on the other side it's a Telegram client
 using the [Telethon] library.
 
-**[irgramd primary repository] is in [darcs] version control system, github
-is used as [project management and secondary repository]**
+**[SECURITY ADVISORY](doc/cap_end_vuln.txt)**
 
-**irgramd was forked from [pbui/irtelegramd], was heavily modified and
-currently is a project on its own**
+*[irgramd primary repository] is in [darcs] version control system, github
+is used as [project management and secondary repository]*
 
-**irgramd is under active development, though usable, several
-planned features are not implemented yet**
+*irgramd was forked from [pbui/irtelegramd], was heavily modified and
+currently is a project on its own*
+
+*irgramd is under active development, though usable, several
+planned features are not implemented yet*
 
 <br>
 <p align="center">
