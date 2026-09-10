@@ -143,8 +143,8 @@ class TelegramHandler(object):
             if count > 3:
                 self.logger.error(attempts_msg)
                 return
-            await asyncio.to_thread(print, 'You must provide the Login code that Telegram will '
-                                           'sent you via SMS or another connected client')
+            print('You must provide the Login code that Telegram will '
+                  'sent you via SMS or another connected client')
             code = await asyncio.to_thread(input, 'Login code: ')
             try:
                 await self.telegram_client.sign_in(code=code)
@@ -154,8 +154,8 @@ class TelegramHandler(object):
                     if count > 3:
                         self.logger.error(attempts_msg)
                         return
-                    await asyncio.to_thread(print, '2nd factor authentication (2FA) password is enabled '
-                                                   'in your account, you must provide it')
+                    print('2nd factor authentication (2FA) password is enabled '
+                          'in your account, you must provide it')
                     passw = await asyncio.to_thread(getpass, 'Password (not shown): ')
                     try:
                         await self.telegram_client.sign_in(password=passw)
