@@ -134,9 +134,6 @@ class IRCHandler(object):
         self.irc_handlers = \
         (
             # pattern              handle           register_required   num_params_required
-            (IRC_CAP_LS_RX,   self.handle_irc_cap_ls,   False,            0),
-            (IRC_CAP_END_RX,  self.handle_irc_cap_end,  False,            0),
-            (IRC_CAP_REQ_RX,  self.handle_irc_cap_req,  False,            1),
             (IRC_PRIVMSG_RX,  self.handle_irc_privmsg,  True,             ALL_PARAMS),
             (IRC_PING_RX,     self.handle_irc_ping,     True,             ALL_PARAMS),
             (IRC_JOIN_RX,     self.handle_irc_join,     True,             ALL_PARAMS),
@@ -154,6 +151,9 @@ class IRCHandler(object):
             (IRC_QUIT_RX,     self.handle_irc_quit,     False,            0),
             (IRC_VERSION_RX,  self.handle_irc_version,  True,             0),
             (IRC_PASS_RX,     self.handle_irc_pass,     False,            ALL_PARAMS),
+            (IRC_CAP_LS_RX,   self.handle_irc_cap_ls,   False,            0),
+            (IRC_CAP_END_RX,  self.handle_irc_cap_end,  False,            0),
+            (IRC_CAP_REQ_RX,  self.handle_irc_cap_req,  False,            1),
         )
         self.iid_to_tid   = {}
         self.irc_channels = collections.defaultdict(set)
