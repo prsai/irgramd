@@ -72,9 +72,9 @@ executed in a different host).
 ## Requirements
 
 - [python] (>= v3.9)
-- [telethon] (tested with v1.28.5)
-- [tornado] (tested with v6.1.0)
-- [pyPAM] (optional, tested with v0.4.2-13.4 from deb, [legacy web](https://web.archive.org/web/20110316070059/http://www.pangalactic.org/PyPAM/))
+- [telethon] (tested with v1.45.0)
+- [tornado] (tested with v6.5.8)
+- [pyPAM] (optional, tested with v0.4.2-16 from deb, [legacy web](https://web.archive.org/web/20110316070059/http://www.pangalactic.org/PyPAM/))
 
 ## Instalation
 
@@ -155,8 +155,7 @@ can be found in the LICENSE file included in this project.
 [pbui/irtelegramd]: https://github.com/pbui/irtelegramd
 [python]: https://www.python.org
 [tornado]: https://www.tornadoweb.org
-[aioconsole]: https://github.com/vxgmichel/aioconsole
-[pyPAM]: https://packages.debian.org/bullseye/python3-pam
+[pyPAM]: https://packages.debian.org/bookworm/python3-pam
 [BNC]: https://en.wikipedia.org/wiki/BNC_(software)
 [telegramircd]: https://github.com/prsai/telegramircd
 [ibotg]: https://github.com/prsai/ibotg
