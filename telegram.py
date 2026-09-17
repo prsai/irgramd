@@ -704,6 +704,9 @@ class TelegramHandler(object):
         elif isinstance(update, tgty.UpdateMessageReactions):
             await self.handle_next_reaction(update)
 
+        elif isinstance(update, tgty.UpdateChatParticipants):
+            await self.handle_telegram_leave(update)
+
     async def handle_telegram_message(self, event, message=None, upd_to_webpend=None, history=False):
         self.logger.debug('Handling Telegram Message: %s', pretty(event or message))
 
@@ -731,7 +734,7 @@ class TelegramHandler(object):
             text = message.message
 
         if message.action:
-            final_text = await self.handle_telegram_action(message, mid)
+            final_text = await self.handle_telegram_history_action(message, mid)
             return final_text
         elif message.is_reply:
             refwd_text = await self.handle_telegram_reply(message)
@@ -793,45 +796,53 @@ class TelegramHandler(object):
     async def handle_telegram_chat_action(self, event):
         self.logger.debug('Handling Telegram Chat Action: %s', pretty(event))
 
-        try:
-            tid = event.action_message.to_id.channel_id
-        except AttributeError:
-            tid = event.action_message.to_id.chat_id
-        finally:
-            irc_channel = await self.get_irc_channel_from_telegram_id(tid)
-            await self.get_telegram_channel_participants(tid)
+        peer_id, type = self.get_peer_id_and_type(event.action_message.peer_id)
+        if type == 'user':
+            pass
+        else: # channel, group, etc.
+            irc_channel = await self.get_irc_channel_from_telegram_id(peer_id)
 
-        try:                                        # Join Chats
-            irc_nick = await self.get_irc_nick_from_telegram_id(event.action_message.action.users[0])
-        except (IndexError, AttributeError):
-            try:                                    # Kick
-                irc_nick = await self.get_irc_nick_from_telegram_id(event.action_message.action.user_id)
-            except (IndexError, AttributeError):    # Join Channels
-                irc_nick = await self.get_irc_nick_from_telegram_id(event.action_message.sender_id)
+        tid, _ = self.get_peer_id_and_type(event.action_message.from_id)
+        irc_user = self.get_irc_user_from_telegram(tid)
 
         if event.user_added or event.user_joined:
-            await self.irc.join_irc_channel(irc_nick, irc_channel, full_join=False)
+            await self.irc.join_irc_channel(irc_user, irc_channel, irc_join=False)
+        # currently leave events go to raw updates, not here, but just in case...
         elif event.user_kicked or event.user_left:
-            await self.irc.part_irc_channel(irc_nick, irc_channel)
+            await self.irc.part_irc_channel(irc_user, irc_channel)
 
-    async def join_all_telegram_channels(self):
-        async for dialog in self.telegram_client.iter_dialogs():
-            chat = dialog.entity
-            if not isinstance(chat, tgty.User):
-                channel = self.get_telegram_channel(chat)
-                self.tid_to_iid[chat.id] = channel
-                self.irc.iid_to_tid[channel] = chat.id
-                await self.irc.join_irc_channel(self.irc.irc_nick, channel, full_join=True)
+    async def handle_telegram_leave(self, event):
+        self.logger.debug('Handling Telegram Leave: %s', pretty(event))
 
-    async def handle_telegram_action(self, message, mid):
+        chan = await self.get_irc_channel_from_telegram_id(event.participants.chat_id)
+        partici = event.participants.participants
+        # check if joined, handled in chat_action, not here
+        if len(partici) >= len(self.irc.irc_channels[chan]):
+            return
+        # the update event only gives current participants
+        # figure out who left
+        users = {u for u in self.irc.irc_channels[chan] if self.irc.users[u].stream is None}
+        partici_nicks = {self.get_irc_name_from_telegram_id(id.user_id) for id in partici}
+        partici_nicks.discard(self.tg_username)
+        nick_leaving = {nick for nick in users if nick not in partici_nicks}
+        if nick_leaving:
+            nick_leaving = nick_leaving.pop().lower()
+            await self.irc.part_irc_channel(self.irc.users[nick_leaving], chan)
+
+    async def handle_telegram_history_action(self, message, mid):
         if isinstance(message.action, tgty.MessageActionPinMessage):
             replied = await message.get_reply_message()
             cid = self.mid.num_to_id_offset(replied.peer_id, replied.id)
-            action_text = 'has pinned message [{}]'.format(cid)
+            action_text = 'pinned message [{}]'.format(cid)
         elif isinstance(message.action, tgty.MessageActionChatEditPhoto):
             _, media_type = self.scan_photo_attributes(message.action.photo)
             photo_url = await self.download_telegram_media(message, mid)
-            action_text = 'has changed chat [{}] {}'.format(media_type, photo_url)
+            action_text = 'changed chat [{}] {}'.format(media_type, photo_url)
+        elif isinstance(message.action, tgty.MessageActionChatJoinedByLink) or \
+             isinstance(message.action, tgty.MessageActionChatJoinedByRequest):
+            tid, _ = self.get_peer_id_and_type(message.peer_id)
+            chan = await self.get_irc_channel_from_telegram_id(tid)
+            action_text = 'joined channel {}'.format(chan)
         else:
             action_text = ''
         return action_text

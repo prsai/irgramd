@@ -272,11 +272,11 @@ class IRCHandler(object):
         if channels == '0':
             for channel in self.irc_channels.keys():
                 if user.irc_nick in self.irc_channels[channel]:
-                    await self.part_irc_channel(user, channel, '')
+                    await self.part_irc_channel(user, channel)
         else:
             for channel in channels.split(','):
                 if channel.lower() in self.irc_channels.keys():
-                    await self.join_irc_channel(user, channel, full_join=True)
+                    await self.join_irc_channel(user, channel, irc_join=True)
                 else:
                     await self.reply_code(user, 'ERR_NOSUCHCHANNEL', (channel,))
 
@@ -650,18 +650,18 @@ class IRCHandler(object):
         else:
             await self.reply_code(user, 'RPL_CHANNELMODEIS', (channel, modes,''))
 
-    async def join_irc_channel(self, user, channel, full_join):
+    async def join_irc_channel(self, user, channel, irc_join):
         entity_cache = [None]
         chan = channel.lower()
         real_chan = self.get_realcaps_name(chan)
 
-        if full_join: self.irc_channels[chan].add(user.irc_nick)
+        self.irc_channels[chan].add(user.irc_nick)
 
         # Notify IRC users in this channel
         for usr in [self.users[x.lower()] for x in self.irc_channels[chan] if self.users[x.lower()].stream]:
             await self.reply_command(usr, user, 'JOIN', (real_chan,))
 
-        if not full_join:
+        if not irc_join:
             return
 
         op = self.get_irc_op(self.tg.tg_username, channel)
@@ -673,8 +673,10 @@ class IRCHandler(object):
         await self.irc_channel_topic(user, real_chan, entity_cache)
         await self.irc_namelist(user, real_chan)
 
-    async def part_irc_channel(self, user, channel, reason):
+    async def part_irc_channel(self, user, channel, reason=''):
         chan = channel.lower()
+        if user.irc_nick not in self.irc_channels[chan]:
+            return            
         real_chan = self.get_realcaps_name(chan)
 
         # Notify IRC users in this channel
