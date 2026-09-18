@@ -797,10 +797,10 @@ class TelegramHandler(object):
         self.logger.debug('Handling Telegram Chat Action: %s', pretty(event))
 
         peer_id, type = self.get_peer_id_and_type(event.action_message.peer_id)
-        if type == 'user':
-            pass
-        else: # channel, group, etc.
+        if type == 'chan':
             irc_channel = await self.get_irc_channel_from_telegram_id(peer_id)
+        else:
+            return
 
         tid, _ = self.get_peer_id_and_type(event.action_message.from_id)
         irc_user = self.get_irc_user_from_telegram(tid)
