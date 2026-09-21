@@ -203,10 +203,14 @@ class TelegramHandler(object):
         return tg_nick
 
     async def set_irc_channel_from_telegram(self, chat):
-        channel = self.get_telegram_channel(chat)
-        self.tid_to_iid[chat.id] = channel
-        chan = channel.lower()
-        self.irc.iid_to_tid[chan] = chat.id
+        channel = self.get_irc_channel_from_telegram_id(chat.id)
+        if channel == '':
+            channel = self.get_telegram_channel(chat)
+            chan = channel.lower()
+            self.tid_to_iid[chat.id] = channel
+            self.irc.iid_to_tid[chan] = chat.id
+        else:
+            chan = channel.lower()
         self.irc.irc_channels[chan] = set()
         # Add users from the channel
         try:
@@ -261,7 +265,7 @@ class TelegramHandler(object):
             name_in_irc = '<Unknown>'
         return name_in_irc
 
-    async def get_irc_name_from_telegram_forward(self, fwd, saved):
+    def get_irc_name_from_telegram_forward(self, fwd, saved):
         from_id = fwd.saved_from_peer if saved else fwd.from_id
         if from_id is None:
             # telegram user has privacy options to show only the name
@@ -282,7 +286,7 @@ class TelegramHandler(object):
                         name = user.irc_nick
             else:
                 try:
-                    name = await self.get_irc_channel_from_telegram_id(peer_id)
+                    name = self.get_irc_channel_from_telegram_id(peer_id)
                 except:
                     name = ''
         return name
@@ -296,15 +300,12 @@ class TelegramHandler(object):
 
         return self.tid_to_iid[tid]
 
-    async def get_irc_channel_from_telegram_id(self, tid, entity=None):
-        rtid, type = tgutils.resolve_id(tid)
-        if rtid not in self.tid_to_iid:
-            chat    = entity or await self.telegram_client.get_entity(tid)
-            channel = self.get_telegram_channel(chat)
-            self.tid_to_iid[rtid]     = channel
-            self.irc.iid_to_tid[channel] = rtid
-
-        return self.tid_to_iid[rtid]
+    def get_irc_channel_from_telegram_id(self, tid):
+        rtid, _ = tgutils.resolve_id(tid)
+        if rtid in self.tid_to_iid:
+            return self.tid_to_iid[rtid]
+        else:
+            return ''
 
     async def get_telegram_channel_participants(self, tid):
         channel = self.tid_to_iid[tid]
@@ -432,7 +433,7 @@ class TelegramHandler(object):
         sep = '-'
         id, type = self.get_peer_id_and_type(peer)
         if type == 'chan':
-            subdir = (await self.get_irc_channel_from_telegram_id(id))[1:]
+            subdir = self.get_irc_channel_from_telegram_id(id)[1:]
         elif type == 'user':
             subdir = await self.get_irc_nick_from_telegram_id(id)
         else:
@@ -739,7 +740,7 @@ class TelegramHandler(object):
         elif message.is_reply:
             refwd_text = await self.handle_telegram_reply(message)
         elif message.forward:
-            refwd_text = await self.handle_telegram_forward(message)
+            refwd_text = self.handle_telegram_forward(message)
         else:
             refwd_text = ''
 
@@ -779,8 +780,7 @@ class TelegramHandler(object):
 
     async def relay_telegram_channel_message(self, message, user, text, channel, action, timestamp=None):
         if message:
-            entity = await message.get_chat()
-            chan = await self.get_irc_channel_from_telegram_id(message.chat_id, entity)
+            chan = self.get_irc_channel_from_telegram_id(message.chat_id)
         else:
             chan = channel
 
@@ -797,13 +797,20 @@ class TelegramHandler(object):
         self.logger.debug('Handling Telegram Chat Action: %s', pretty(event))
 
         peer_id, type = self.get_peer_id_and_type(event.action_message.peer_id)
-        if type == 'chan':
-            irc_channel = await self.get_irc_channel_from_telegram_id(peer_id)
-        else:
+        if type != 'chan':
             return
 
-        tid, _ = self.get_peer_id_and_type(event.action_message.from_id)
-        irc_user = self.get_irc_user_from_telegram(tid)
+        user_tid, _ = self.get_peer_id_and_type(event.action_message.from_id)
+        irc_user = self.get_irc_user_from_telegram(user_tid)
+
+        # if self user, don't do autojoin
+        # just update data structures because the channel is new
+        if irc_user is None:
+            entity = await self.telegram_client.get_entity(peer_id)
+            await self.set_irc_channel_from_telegram(entity)
+            return
+
+        irc_channel = self.get_irc_channel_from_telegram_id(peer_id)
 
         if event.user_added or event.user_joined:
             await self.irc.join_irc_channel(irc_user, irc_channel, irc_join=False)
@@ -814,7 +821,7 @@ class TelegramHandler(object):
     async def handle_telegram_leave(self, event):
         self.logger.debug('Handling Telegram Leave: %s', pretty(event))
 
-        chan = await self.get_irc_channel_from_telegram_id(event.participants.chat_id)
+        chan = self.get_irc_channel_from_telegram_id(event.participants.chat_id).lower()
         partici = event.participants.participants
         # check if joined, handled in chat_action, not here
         if len(partici) >= len(self.irc.irc_channels[chan]):
@@ -841,7 +848,7 @@ class TelegramHandler(object):
         elif isinstance(message.action, tgty.MessageActionChatJoinedByLink) or \
              isinstance(message.action, tgty.MessageActionChatJoinedByRequest):
             tid, _ = self.get_peer_id_and_type(message.peer_id)
-            chan = await self.get_irc_channel_from_telegram_id(tid)
+            chan = self.get_irc_channel_from_telegram_id(tid)
             action_text = 'joined channel {}'.format(chan)
         else:
             action_text = ''
@@ -883,11 +890,11 @@ class TelegramHandler(object):
 
         return '|Re {}: [{}]{}{}{}| '.format(replied_nick, cid, space, replied_msg, trunc)
 
-    async def handle_telegram_forward(self, message):
+    def handle_telegram_forward(self, message):
         space = space2 = ' '
-        if not (forwarded_peer_name := await self.get_irc_name_from_telegram_forward(message.fwd_from, saved=False)):
+        if not (forwarded_peer_name := self.get_irc_name_from_telegram_forward(message.fwd_from, saved=False)):
             space = ''
-        saved_peer_name = await self.get_irc_name_from_telegram_forward(message.fwd_from, saved=True)
+        saved_peer_name = self.get_irc_name_from_telegram_forward(message.fwd_from, saved=True)
         if saved_peer_name and saved_peer_name != forwarded_peer_name:
             secondary_name = saved_peer_name
         else:
