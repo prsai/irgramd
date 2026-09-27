@@ -467,6 +467,7 @@ class IRCHandler(object):
                 cont, tg_msg = await self.exclam.command(message, telegram_id, user)
             else:
                 tg_msg = await self.tg.telegram_client.send_message(telegram_id, message)
+                self.tg.prev_id[target] = tg_msg.id
                 cont = True
             if cont:
                 mid = self.tg.mid.num_to_id_offset(telegram_id, tg_msg.id)
