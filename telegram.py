@@ -398,6 +398,17 @@ class TelegramHandler(object):
             elif entity.gigagroup:
                 short = 'Giga'
                 long = 'Broadcast Gigagroup Channel'
+            else:
+                short = 'Chan'
+                long = 'Unknown Channel'
+        elif isinstance(entity, tgty.ChatForbidden) \
+              or isinstance(entity, tgty.ChannelForbidden) \
+              or isinstance(entity, tgty.CommunityForbidden):
+            short = 'Forb'
+            long = 'Group/Channel Forbidden'
+        else:
+            short = 'Unkn'
+            long = 'Unknown'
 
         return short if format == 'short' else long
 
