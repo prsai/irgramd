@@ -258,11 +258,11 @@ class TelegramHandler(object):
         if nick == self.tg_username: return None
         return self.irc.users[nick.lower()]
 
-    def get_irc_name_from_telegram_id(self, tid):
+    def get_irc_name_from_telegram_id(self, tid, if_not='<Unknown>'):
         if tid in self.tid_to_iid.keys():
             name_in_irc = self.tid_to_iid[tid]
         else:
-            name_in_irc = '<Unknown>'
+            name_in_irc = if_not
         return name_in_irc
 
     def get_irc_name_from_telegram_forward(self, fwd, saved):
@@ -291,32 +291,9 @@ class TelegramHandler(object):
                     name = ''
         return name
 
-    async def get_irc_nick_from_telegram_id(self, tid, entity=None):
-        if tid not in self.tid_to_iid:
-            user = entity or await self.telegram_client.get_entity(tid)
-            nick = self.get_telegram_nick(user)
-            self.tid_to_iid[tid]  = nick
-            self.irc.iid_to_tid[nick] = tid
-
-        return self.tid_to_iid[tid]
-
-    def get_irc_channel_from_telegram_id(self, tid):
+    def get_irc_channel_from_telegram_id(self, tid, if_not=''):
         rtid, _ = tgutils.resolve_id(tid)
-        if rtid in self.tid_to_iid:
-            return self.tid_to_iid[rtid]
-        else:
-            return ''
-
-    async def get_telegram_channel_participants(self, tid):
-        channel = self.tid_to_iid[tid]
-        nicks   = []
-        async for user in self.telegram_client.iter_participants(tid):
-            user_nick = await self.get_irc_nick_from_telegram_id(user.id, user)
-
-            nicks.append(user_nick)
-            self.irc.irc_channels[channel].add(user_nick)
-
-        return nicks
+        return self.get_irc_name_from_telegram_id(rtid, if_not)
 
     async def get_telegram_idle(self, irc_nick, tid=None):
         if self.irc.users[irc_nick].is_service:
@@ -436,7 +413,7 @@ class TelegramHandler(object):
             self.tid_to_token[tid] = token
         return token
 
-    async def get_media_subdir(self, peer, token):
+    def get_media_subdir(self, peer, token):
         if token:
             file_token = token
         else:
@@ -444,9 +421,9 @@ class TelegramHandler(object):
         sep = '-'
         id, type = self.get_peer_id_and_type(peer)
         if type == 'chan':
-            subdir = self.get_irc_channel_from_telegram_id(id)[1:]
+            subdir = self.get_irc_channel_from_telegram_id(id, if_not='_unknown')[1:]
         elif type == 'user':
-            subdir = await self.get_irc_nick_from_telegram_id(id)
+            subdir = self.get_irc_name_from_telegram_id(id, if_not='unknown')
         else:
             subdir = ''
             sep = ''
@@ -1128,7 +1105,7 @@ class TelegramHandler(object):
         idd_file = add_filename(aux_file, mid)
         new_file = sanitize_filename(idd_file)
         if self.media_subs:
-            media_subdir = await self.get_media_subdir(message.peer_id, file_token)
+            media_subdir = self.get_media_subdir(message.peer_id, file_token)
             media_subdir_url = media_subdir + '/'
         else:
             media_subdir = media_subdir_url = ''
