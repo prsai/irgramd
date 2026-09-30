@@ -23,18 +23,11 @@ from telethon.errors.rpcerrorlist import SessionPasswordNeededError
 
 # Local modules
 
-from include import CHAN_MAX_LENGTH, NICK_MAX_LENGTH
+from include import CHAN_MAX_LENGTH, NICK_MAX_LENGTH, TEST_IPS
 from irc import IRCUser
 from utils import sanitize_filename, add_filename, is_url_equiv, extract_url, get_human_size, get_human_duration
 from utils import get_highlighted, fix_braces, pretty, current_date, hash_token
 import emoji2emoticon as e
-
-# Test IP table
-
-TEST_IPS = { 1: '149.154.175.10',
-             2: '149.154.167.40',
-             3: '149.154.175.117',
-           }
 
     # Telegram
 
