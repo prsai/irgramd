@@ -429,6 +429,13 @@ class IRCHandler(object):
     async def handle_irc_privmsg(self, user, target, message):
         self.logger.debug('Handling PRIVMSG: %s, %s', target, message)
 
+        async def message_error(exception):
+            error = 'Cannot send message'
+            await self.send_msg(self.service_user, None, error, user)
+            sep = ': ' if exception else ''
+            self.logger.warning('{}{}{}'.format(error, sep, exception))
+        exception=''
+
         tgl = target.lower()
         if self.service_user.irc_nick.lower() == tgl:
             reply = await self.service.parse_command(message, user.irc_nick)
@@ -464,18 +471,23 @@ class IRCHandler(object):
             if double_exclam := (message[:2] == '!!'):
                 message = message[1:]
             if message[0] == '!' and not double_exclam:
-                cont, tg_msg = await self.exclam.command(message, telegram_id, user)
+                tg_msg, exception = await self.exclam.command(message, telegram_id, user)
             else:
-                tg_msg = await self.tg.telegram_client.send_message(telegram_id, message)
+                try:
+                    tg_msg = await self.tg.telegram_client.send_message(telegram_id, message)
+                except BaseException as exc:
+                    exception = exc
+                    tg_msg = None
+            if tg_msg:
                 self.tg.prev_id[target] = tg_msg.id
-                cont = True
-            if cont:
                 mid = self.tg.mid.num_to_id_offset(telegram_id, tg_msg.id)
                 text = '[{}] {}'.format(mid, message)
                 self.tg.to_cache(tg_msg.id, mid, text, message, user, chan, media=None)
 
                 if defered_send:
                     await defered_send(user, defered_target, text)
+            elif tg_msg is None:
+                await message_error(exception)
         else:
             await self.reply_code(user, 'ERR_NOSUCHNICK', (target,))
 

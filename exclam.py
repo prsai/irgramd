@@ -35,15 +35,16 @@ class exclam(command):
         self.irc = telegram.irc
         self.tmp_ircnick = None
         self.tmp_telegram_id = None
-        self.tmp_tg_msg = None
+        self.tmp_exc = ''
 
     async def command(self, message, telegram_id, user):
         self.tmp_telegram_id = telegram_id
+        self.tmp_exc = ''
         res = await self.parse_command(message, nick=None)
         if isinstance(res, tuple):
             await self.irc.send_msg(self.irc.service_user, None, res[0], user)
             res = False
-        return res, self.tmp_tg_msg
+        return res, self.tmp_exc
 
     async def check_msg(self, cid):
         id = self.tg.mid.id_to_num_offset(self.tmp_telegram_id, cid)
@@ -57,8 +58,11 @@ class exclam(command):
         if not help:
             id, chk_msg = await self.check_msg(cid)
             if chk_msg is not None:
-                self.tmp_tg_msg = await self.tg.telegram_client.send_message(self.tmp_telegram_id, msg, reply_to=id)
-                reply = True
+                try:
+                    reply = await self.tg.telegram_client.send_message(self.tmp_telegram_id, msg, reply_to=id)
+                except BaseException as exc:
+                    self.tmp_exc = exc
+                    reply = None
             else:
                 reply = ('!re: Unknown message to reply',)
         else: # HELP.brief or HELP.desc (first line)
@@ -77,14 +81,13 @@ class exclam(command):
             id, ed_msg = await self.check_msg(cid)
             if ed_msg is not None:
                 try:
-                    self.tmp_tg_msg = await self.tg.telegram_client.edit_message(ed_msg, new_msg)
+                    reply = await self.tg.telegram_client.edit_message(ed_msg, new_msg)
                 except MessageNotModifiedError:
-                    self.tmp_tg_msg = ed_msg
-                    reply = True
+                    reply = ed_msg
                 except MessageAuthorRequiredError:
                     reply = ('!ed: Not the author of the message to edit',)
-                else:
-                    reply = True
+                except:
+                    reply = ('!ed: Cannot edit message',)
             else:
                 reply = ('!ed: Unknown message to edit',)
         else: # HELP.brief or HELP.desc (first line)
@@ -102,12 +105,16 @@ class exclam(command):
         if not help:
             id, del_msg = await self.check_msg(cid)
             if del_msg is not None:
-                deleted = await self.tg.telegram_client.delete_messages(self.tmp_telegram_id, del_msg)
-                if deleted[0].pts_count == 0:
-                    reply = ('!del: Not possible to delete',)
+                try:
+                    reply = await self.tg.telegram_client.delete_messages(self.tmp_telegram_id, del_msg)
+                except:
+                    deleted = False
                 else:
-                    self.tmp_tg_msg = None
-                    reply = None
+                    deleted = (reply[0].pts_count > 0) if reply else False
+                if deleted:
+                    reply = False
+                else:
+                    reply = ('!del: Not possible to delete',)
             else:
                 reply = ('!del: Unknown message to delete',)
         else: # HELP.brief or HELP.desc (first line)
@@ -126,20 +133,23 @@ class exclam(command):
             if chk_msg is not None:
                 async def send_fwd(tgt_ent, id):
                     from_ent = await self.tg.telegram_client.get_entity(self.tmp_telegram_id)
-                    self.tmp_tg_msg = await self.tg.telegram_client.forward_messages(tgt_ent, id, from_ent)
-                    return self.tmp_tg_msg
+                    try:
+                        reply = await self.tg.telegram_client.forward_messages(tgt_ent, id, from_ent)
+                    except BaseException as exc:
+                        self.tmp_exc = exc
+                        reply = None
+                    return reply
 
                 tgt = chat.lower()
                 if tgt in self.irc.iid_to_tid:
                     tgt_ent = await self.tg.telegram_client.get_entity(self.irc.iid_to_tid[tgt])
-                    msg = await send_fwd(tgt_ent, id)
+                    reply = await send_fwd(tgt_ent, id)
                     # echo fwded message
-                    await self.tg.handle_telegram_message(event=None, message=msg)
-                    reply = True
+                    if reply:
+                        await self.tg.handle_telegram_message(event=None, message=reply)
                 elif tgt in (u.irc_nick.lower() for u in self.irc.users.values() if u.stream):
                     tgt_ent = await self.tg.telegram_client.get_me()
-                    await send_fwd(tgt_ent, id)
-                    reply = True
+                    reply = await send_fwd(tgt_ent, id)
                 else:
                     reply = ('!fwd: Unknown chat to forward',)
             else:
@@ -161,8 +171,7 @@ class exclam(command):
                     file_path = file
                 else:
                     file_path = os.path.join(self.tg.telegram_upload_dir, file)
-                self.tmp_tg_msg = await self.tg.telegram_client.send_file(self.tmp_telegram_id, file_path, caption=caption, reply_to=re_id)
-                reply = True
+                reply = await self.tg.telegram_client.send_file(self.tmp_telegram_id, file_path, caption=caption, reply_to=re_id)
             except:
                 cmd = '!reupl' if re_id else '!upl'
                 reply = ('{}: Error uploading'.format(cmd),)
@@ -210,8 +219,10 @@ class exclam(command):
                     except ReactionInvalidError:
                         reply = ('!react: Reaction not allowed',)
                     else:
-                        self.tmp_tg_msg = getattr(update.updates[0], 'message', None)
-                        reply = bool(self.tmp_tg_msg)
+                        if update:
+                            reply = getattr(update.updates[0], 'message', False)
+                        else:
+                            reply = ('!react: Error sending reaction',)
                 else:
                     reply = ('!react: Unknown reaction',)
             else:
@@ -231,6 +242,7 @@ class exclam(command):
     async def handle_command_get(self, mid=None, help=None):
         if not help:
             msg = None
+            reply = None
             # If the ID starts with '=' is absolute ID, not compact ID
             # character '=' is not used by compact IDs
             if mid[0] == '=':
@@ -238,11 +250,15 @@ class exclam(command):
             else:
                 id = self.tg.mid.id_to_num_offset(self.tmp_telegram_id, mid)
             if id is not None:
-                msg = await self.tg.telegram_client.get_messages(entity=self.tmp_telegram_id, ids=id)
-            if msg is not None:
+                try:
+                    msg = await self.tg.telegram_client.get_messages(entity=self.tmp_telegram_id, ids=id)
+                except:
+                    reply = ('!get: Error getting message',)
+                    msg = None
+            if msg:
                 await self.tg.handle_telegram_message(event=None, message=msg, history=True)
-                reply = None
-            else:
+                reply = False
+            elif not reply:
                 reply = ('!get: Message not found',)
         else: # HELP.brief or HELP.desc (first line)
             reply = ('   !get        Get a message by id',)
@@ -306,9 +322,14 @@ class exclam(command):
                 li, reply = conv_int(limit, neg=False)
                 if reply: return reply
 
-            his = await self.tg.telegram_client.get_messages(self.tmp_telegram_id, limit=li)
-            for msg in reversed(his):
-                await self.tg.handle_telegram_message(event=None, message=msg, history=True)
+            try:
+                his = await self.tg.telegram_client.get_messages(self.tmp_telegram_id, limit=li)
+            except:
+                reply = ('!history: Error getting history',)
+            else:
+                for msg in reversed(his):
+                    await self.tg.handle_telegram_message(event=None, message=msg, history=True)
+            reply = False
         else: # HELP.brief or HELP.desc (first line)
             reply = ('   !history    Get messages from history',)
         if help == HELP.desc:  # rest of HELP.desc
