@@ -1004,9 +1004,9 @@ class TelegramHandler(object):
         return self.format_media(media_type, media_url_or_data, caption)
 
     def handle_poll(self, poll):
-        text = poll.question
+        text = poll.question.text
         for ans in poll.answers:
-            text += '\n* ' + ans.text
+            text += '\n* ' + ans.text.text
         return text
 
     def handle_target_mine(self, target, user):
