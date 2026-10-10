@@ -777,6 +777,10 @@ class TelegramHandler(object):
     async def handle_telegram_chat_action(self, event):
         self.logger.debug('Handling Telegram Chat Action: %s', pretty(event))
 
+        # Raw updates such as unpins do not have a service message.
+        if event.action_message is None:
+            return
+
         peer_id, type = self.get_peer_id_and_type(event.action_message.peer_id)
         if type != 'chan':
             return
