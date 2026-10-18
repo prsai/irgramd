@@ -148,8 +148,9 @@ def get_human_size(size):
 
     return fs.format(num, unit)
 
-def get_human_duration(duration):
+def get_human_duration(duration_raw):
     res = ''
+    duration = int(duration_raw)
     x, s = divmod(duration, 60)
     h, m = divmod(x, 60)
 
